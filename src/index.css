@@ -2,41 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Eclipse Realms Design System - Cosmic multiverse theme */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Cosmic Background */
+    --background: 225 25% 8%;
+    --foreground: 280 15% 95%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Cards with cosmic glass effect */
+    --card: 225 25% 12%;
+    --card-foreground: 280 15% 95%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* Popover cosmic theme */
+    --popover: 225 30% 10%;
+    --popover-foreground: 280 15% 95%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Eclipse Gold Primary */
+    --primary: 35 100% 65%;
+    --primary-foreground: 225 25% 8%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Mystic Purple Secondary */
+    --secondary: 270 60% 35%;
+    --secondary-foreground: 280 15% 95%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Cosmic Muted */
+    --muted: 225 20% 18%;
+    --muted-foreground: 280 10% 70%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Rift Blue Accent */
+    --accent: 210 80% 55%;
+    --accent-foreground: 225 25% 8%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Cosmic Red Destructive */
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 280 15% 95%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Cosmic Borders */
+    --border: 225 20% 20%;
+    --input: 225 20% 15%;
+    --ring: 35 100% 65%;
 
-    --radius: 0.5rem;
+    /* Custom Eclipse Realms Colors */
+    --eclipse-gold: 35 100% 65%;
+    --eclipse-orange: 25 100% 60%;
+    --mystic-purple: 270 60% 35%;
+    --mystic-magenta: 300 70% 50%;
+    --rift-blue: 210 80% 55%;
+    --rift-cyan: 190 80% 60%;
+    --void-dark: 225 30% 5%;
+    --void-darker: 225 35% 3%;
+    --cosmic-white: 280 15% 95%;
+    
+    /* Realm Theme Colors */
+    --frozen-blue: 200 90% 70%;
+    --celestial-gold: 45 95% 75%;
+    --lava-red: 15 90% 60%;
+    --cyber-neon: 180 100% 50%;
+    --apocalypse-rust: 20 60% 45%;
+
+    /* Gradients */
+    --gradient-cosmic: linear-gradient(135deg, hsl(var(--void-darker)), hsl(var(--mystic-purple) / 0.3), hsl(var(--void-dark)));
+    --gradient-eclipse: linear-gradient(135deg, hsl(var(--eclipse-orange)), hsl(var(--eclipse-gold)));
+    --gradient-rift: linear-gradient(135deg, hsl(var(--rift-blue)), hsl(var(--rift-cyan)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--void-darker)), hsl(var(--mystic-purple) / 0.4), hsl(var(--eclipse-gold) / 0.2));
+    --gradient-card: linear-gradient(135deg, hsl(var(--card) / 0.8), hsl(var(--mystic-purple) / 0.1));
+
+    /* Effects */
+    --glow-eclipse: 0 0 40px hsl(var(--eclipse-gold) / 0.4);
+    --glow-rift: 0 0 30px hsl(var(--rift-blue) / 0.4);
+    --glow-mystic: 0 0 25px hsl(var(--mystic-magenta) / 0.3);
+    
+    /* Animations */
+    --transition-cosmic: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-glow: all 0.3s ease-in-out;
+
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -55,42 +96,28 @@ All colors MUST be HSL.
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
+  /* Eclipse Realms maintains consistent cosmic theme */
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Same cosmic values for consistent theming */
+    --background: 225 25% 8%;
+    --foreground: 280 15% 95%;
+    --card: 225 25% 12%;
+    --card-foreground: 280 15% 95%;
+    --popover: 225 30% 10%;
+    --popover-foreground: 280 15% 95%;
+    --primary: 35 100% 65%;
+    --primary-foreground: 225 25% 8%;
+    --secondary: 270 60% 35%;
+    --secondary-foreground: 280 15% 95%;
+    --muted: 225 20% 18%;
+    --muted-foreground: 280 10% 70%;
+    --accent: 210 80% 55%;
+    --accent-foreground: 225 25% 8%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 280 15% 95%;
+    --border: 225 20% 20%;
+    --input: 225 20% 15%;
+    --ring: 35 100% 65%;
   }
 }
 
@@ -101,5 +128,100 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    background: var(--gradient-cosmic);
+    min-height: 100vh;
+  }
+  
+  /* Custom scrollbar for cosmic theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--void-dark));
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--mystic-purple));
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--eclipse-gold));
+  }
+}
+
+@layer components {
+  /* Cosmic glow animations */
+  .cosmic-glow {
+    box-shadow: var(--glow-eclipse);
+    transition: var(--transition-glow);
+  }
+  
+  .cosmic-glow:hover {
+    box-shadow: var(--glow-eclipse), 0 0 60px hsl(var(--eclipse-gold) / 0.6);
+  }
+  
+  .rift-glow {
+    box-shadow: var(--glow-rift);
+    transition: var(--transition-glow);
+  }
+  
+  .rift-glow:hover {
+    box-shadow: var(--glow-rift), 0 0 45px hsl(var(--rift-blue) / 0.5);
+  }
+  
+  /* Text gradients */
+  .text-gradient-eclipse {
+    background: var(--gradient-eclipse);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .text-gradient-rift {
+    background: var(--gradient-rift);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Floating animation */
+  .float-animation {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+  
+  /* Pulse glow effect */
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite alternate;
+  }
+  
+  @keyframes pulse-glow {
+    from { box-shadow: var(--glow-eclipse); }
+    to { box-shadow: var(--glow-eclipse), 0 0 80px hsl(var(--eclipse-gold) / 0.4); }
+  }
+  
+  /* Starfield background effect */
+  .starfield {
+    background-image: 
+      radial-gradient(2px 2px at 20px 30px, hsl(var(--cosmic-white)), transparent),
+      radial-gradient(2px 2px at 40px 70px, hsl(var(--eclipse-gold) / 0.8), transparent),
+      radial-gradient(1px 1px at 90px 40px, hsl(var(--rift-blue) / 0.6), transparent),
+      radial-gradient(1px 1px at 130px 80px, hsl(var(--mystic-magenta) / 0.4), transparent),
+      radial-gradient(2px 2px at 160px 30px, hsl(var(--cosmic-white) / 0.8), transparent);
+    background-repeat: repeat;
+    background-size: 200px 100px;
+    animation: twinkle 10s linear infinite;
+  }
+  
+  @keyframes twinkle {
+    0% { opacity: 0.8; }
+    50% { opacity: 0.4; }
+    100% { opacity: 0.8; }
   }
 }

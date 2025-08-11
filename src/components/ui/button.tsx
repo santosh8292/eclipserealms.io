@@ -18,6 +18,11 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Eclipse Realms custom variants
+        eclipse: "bg-gradient-eclipse text-void-dark hover:shadow-glow-eclipse transition-all duration-300 font-semibold",
+        rift: "bg-gradient-rift text-void-dark hover:shadow-glow-rift transition-all duration-300 font-semibold",
+        cosmic: "bg-gradient-card border border-mystic-purple/30 text-cosmic-white hover:border-eclipse-gold/50 hover:shadow-glow-mystic transition-all duration-300",
+        realm: "bg-mystic-purple/20 border border-mystic-purple/40 text-cosmic-white hover:bg-mystic-purple/30 hover:border-eclipse-gold/60 transition-all duration-300",
       },
       size: {
         default: "h-10 px-4 py-2",

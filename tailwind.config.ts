@@ -52,6 +52,21 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// Eclipse Realms Custom Colors
+				'eclipse-gold': 'hsl(var(--eclipse-gold))',
+				'eclipse-orange': 'hsl(var(--eclipse-orange))',
+				'mystic-purple': 'hsl(var(--mystic-purple))',
+				'mystic-magenta': 'hsl(var(--mystic-magenta))',
+				'rift-blue': 'hsl(var(--rift-blue))',
+				'rift-cyan': 'hsl(var(--rift-cyan))',
+				'void-dark': 'hsl(var(--void-dark))',
+				'void-darker': 'hsl(var(--void-darker))',
+				'cosmic-white': 'hsl(var(--cosmic-white))',
+				'frozen-blue': 'hsl(var(--frozen-blue))',
+				'celestial-gold': 'hsl(var(--celestial-gold))',
+				'lava-red': 'hsl(var(--lava-red))',
+				'cyber-neon': 'hsl(var(--cyber-neon))',
+				'apocalypse-rust': 'hsl(var(--apocalypse-rust))',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -67,6 +82,21 @@ export default {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			backgroundImage: {
+				'gradient-cosmic': 'var(--gradient-cosmic)',
+				'gradient-eclipse': 'var(--gradient-eclipse)',
+				'gradient-rift': 'var(--gradient-rift)',
+				'gradient-hero': 'var(--gradient-hero)',
+				'gradient-card': 'var(--gradient-card)',
+			},
+			boxShadow: {
+				'glow-eclipse': 'var(--glow-eclipse)',
+				'glow-rift': 'var(--glow-rift)',
+				'glow-mystic': 'var(--glow-mystic)',
+			},
+			fontFamily: {
+				'cosmic': ['Inter', 'system-ui', 'sans-serif'],
 			},
 			keyframes: {
 				'accordion-down': {
