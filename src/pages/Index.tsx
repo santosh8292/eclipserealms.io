@@ -2,6 +2,8 @@ import HeroSection from "@/components/ui/hero-section";
 import FeaturesSection from "@/components/ui/features-section";
 import RealmsSection from "@/components/ui/realms-section";
 import CharactersSection from "@/components/ui/characters-section";
+import PaymentSection from "@/components/ui/payment-section";
+import DeveloperSection from "@/components/ui/developer-section";
 import Footer from "@/components/ui/footer";
 
 const Index = () => {
@@ -11,6 +13,8 @@ const Index = () => {
       <FeaturesSection />
       <RealmsSection />
       <CharactersSection />
+      <PaymentSection />
+      <DeveloperSection />
       <Footer />
     </div>
   );

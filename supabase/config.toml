@@ -1,1 +1,10 @@
 project_id = "etxshftoozybhaltulcp"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://lovable.dev"]
+jwt_expiry = 3600
+
+[functions.create-payment]
+verify_jwt = false
