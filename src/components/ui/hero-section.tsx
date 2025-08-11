@@ -40,14 +40,21 @@ const HeroSection = () => {
         <p className="text-lg text-cosmic-white/80 mb-12 max-w-3xl mx-auto leading-relaxed">
           Become a Realmwalker and traverse fractured realities in this epic cross-platform 
           Action-RPG. Explore procedurally generated worlds, master unique abilities, 
-          and shape a multiverse-spanning narrative.
+          and shape a multiverse-spanning narrative. <span className="text-eclipse-gold font-semibold">Play for free!</span>
         </p>
 
         {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-          <Button variant="eclipse" size="lg" className="text-lg px-8 py-6 cosmic-glow">
-            <Play className="mr-2 h-5 w-5" />
-            Play Now - Free
+          <Button 
+            asChild
+            variant="eclipse" 
+            size="lg" 
+            className="text-lg px-8 py-6 cosmic-glow"
+          >
+            <a href="#game">
+              <Play className="mr-2 h-5 w-5" />
+              Play Now - Free
+            </a>
           </Button>
           <Button variant="cosmic" size="lg" className="text-lg px-8 py-6">
             <Download className="mr-2 h-5 w-5" />
