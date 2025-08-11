@@ -24,6 +24,7 @@ interface GameState {
   distance: number;
   isPlaying: boolean;
   isGameOver: boolean;
+  isFullscreen: boolean;
   playerLane: number; // -1, 0, 1 (left, center, right)
   selectedCharacter: string;
   speed: number;
@@ -57,6 +58,7 @@ const TempleRunGame = () => {
     distance: 0,
     isPlaying: false,
     isGameOver: false,
+    isFullscreen: false,
     playerLane: 0, // Center lane
     selectedCharacter: "shadowmancer",
     speed: 3,
@@ -346,18 +348,28 @@ const TempleRunGame = () => {
     setGameState(prev => ({
       ...prev,
       isPlaying: true,
-      isGameOver: false
+      isGameOver: false,
+      isFullscreen: true
     }));
     setObstacles([]);
     setCoins([]);
     toast({
-      title: "Temple Run Started!",
+      title: "Eclipse Realms Started!",
       description: "Use arrow keys to move, spacebar to jump!",
     });
   };
 
   const pauseGame = () => {
     setGameState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
+  };
+
+  const exitGame = () => {
+    setGameState(prev => ({ 
+      ...prev, 
+      isPlaying: false, 
+      isFullscreen: false,
+      isGameOver: false 
+    }));
   };
 
   const resetGame = () => {
@@ -368,6 +380,7 @@ const TempleRunGame = () => {
       distance: 0,
       isPlaying: false,
       isGameOver: false,
+      isFullscreen: false,
       playerLane: 0,
       selectedCharacter: gameState.selectedCharacter,
       speed: 3,
@@ -377,6 +390,140 @@ const TempleRunGame = () => {
     setObstacles([]);
     setCoins([]);
   };
+
+  // If in fullscreen mode, show only the game
+  if (gameState.isFullscreen) {
+    return (
+      <div className="fixed inset-0 bg-cosmic-black z-50 flex flex-col">
+        {/* Header with exit button */}
+        <div className="bg-cosmic-black/90 border-b border-eclipse-gold/30 p-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gradient-eclipse">Eclipse Realms</h1>
+          <div className="flex gap-2">
+            {gameState.isPlaying && (
+              <Button 
+                onClick={pauseGame}
+                variant="outline"
+                className="border-mystic-purple/40 text-mystic-purple hover:bg-mystic-purple/20"
+              >
+                <Pause className="w-4 h-4 mr-2" />
+                Pause
+              </Button>
+            )}
+            <Button 
+              onClick={exitGame}
+              variant="outline"
+              className="border-lava-red/40 text-lava-red hover:bg-lava-red/20"
+            >
+              Exit Game
+            </Button>
+          </div>
+        </div>
+
+        {/* Game area */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              width={800}
+              height={600}
+              className="border-2 border-eclipse-gold/30 rounded-lg bg-cosmic-black"
+            />
+
+            {/* Game Over Overlay */}
+            {gameState.isGameOver && (
+              <div className="absolute inset-0 bg-cosmic-black/80 flex items-center justify-center rounded-lg">
+                <div className="text-center">
+                  <h3 className="text-3xl font-bold text-lava-red mb-4">Game Over!</h3>
+                  <p className="text-cosmic-white/70 mb-2 text-xl">Score: {gameState.score}</p>
+                  <p className="text-cosmic-white/70 mb-6 text-xl">Distance: {gameState.distance}m</p>
+                  <div className="flex gap-4 justify-center">
+                    <Button onClick={resetGame} className="bg-eclipse-gold hover:bg-eclipse-gold/80">
+                      Play Again
+                    </Button>
+                    <Button onClick={exitGame} variant="outline" className="border-mystic-purple/40 text-mystic-purple">
+                      Exit
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Paused Overlay */}
+            {!gameState.isPlaying && !gameState.isGameOver && gameState.score > 0 && (
+              <div className="absolute inset-0 bg-cosmic-black/80 flex items-center justify-center rounded-lg">
+                <div className="text-center">
+                  <h3 className="text-3xl font-bold text-eclipse-gold mb-4">Game Paused</h3>
+                  <div className="flex gap-4 justify-center">
+                    <Button onClick={() => setGameState(prev => ({ ...prev, isPlaying: true }))} className="bg-eclipse-gold hover:bg-eclipse-gold/80">
+                      Resume
+                    </Button>
+                    <Button onClick={exitGame} variant="outline" className="border-mystic-purple/40 text-mystic-purple">
+                      Exit
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Stats bar */}
+        <div className="bg-cosmic-black/90 border-t border-eclipse-gold/30 p-4 flex justify-between items-center text-cosmic-white">
+          <div className="flex gap-6 text-sm">
+            <span className="flex items-center gap-1">
+              <Heart className="w-4 h-4 text-green-400" />
+              Health: {gameState.health}%
+            </span>
+            <span className="flex items-center gap-1">
+              <Coins className="w-4 h-4 text-yellow-400" />
+              Coins: {gameState.coins}
+            </span>
+            <span className="flex items-center gap-1">
+              <Trophy className="w-4 h-4 text-eclipse-gold" />
+              Score: {gameState.score}
+            </span>
+            <span>Distance: {gameState.distance}m</span>
+          </div>
+          <div className="text-sm text-cosmic-white/70">
+            {selectedChar.emoji} {selectedChar.name}
+          </div>
+        </div>
+
+        {/* Mobile controls */}
+        <div className="md:hidden bg-cosmic-black/90 border-t border-eclipse-gold/30 p-4">
+          <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
+            <Button
+              onClick={() => setGameState(prev => ({ ...prev, playerLane: Math.max(-1, prev.playerLane - 1) }))}
+              variant="outline"
+              className="border-mystic-purple/40 text-mystic-purple h-12"
+              disabled={!gameState.isPlaying}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </Button>
+            <Button
+              onClick={() => !gameState.isJumping && setGameState(prev => ({ ...prev, isJumping: true }))}
+              variant="outline"
+              className="border-eclipse-gold/40 text-eclipse-gold h-12"
+              disabled={!gameState.isPlaying}
+            >
+              <ArrowUp className="w-6 h-6" />
+            </Button>
+            <Button
+              onClick={() => setGameState(prev => ({ ...prev, playerLane: Math.min(1, prev.playerLane + 1) }))}
+              variant="outline"
+              className="border-mystic-purple/40 text-mystic-purple h-12"
+              disabled={!gameState.isPlaying}
+            >
+              <ArrowRight className="w-6 h-6" />
+            </Button>
+          </div>
+          <p className="text-center text-sm text-cosmic-white/60 mt-2">
+            Move left/right • Jump • Avoid obstacles • Collect coins
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="py-24 px-4 sm:px-6 lg:px-8 relative">
@@ -391,14 +538,14 @@ const TempleRunGame = () => {
         <div className="text-center mb-16">
           <Badge className="mb-4 bg-eclipse-gold/20 text-eclipse-gold border-eclipse-gold/30">
             <Gamepad2 className="w-3 h-3 mr-1" />
-            Temple Run - Eclipse Edition
+            Eclipse Realms - Adventure Awaits
           </Badge>
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
             <span className="text-gradient-eclipse">Eclipse</span>{" "}
-            <span className="text-gradient-rift">Temple Run</span>
+            <span className="text-gradient-rift">Realms</span>
           </h2>
           <p className="text-xl text-cosmic-white/70 max-w-3xl mx-auto">
-            Run through mystical temples, avoid obstacles, collect coins, and unlock unique characters!
+            Run through mystical Eclipse Realms, avoid cosmic obstacles, collect star coins, and master unique character abilities!
           </p>
         </div>
 
@@ -497,26 +644,12 @@ const TempleRunGame = () => {
                     className="border-2 border-eclipse-gold/30 rounded-lg bg-cosmic-black mx-auto block"
                   />
 
-                  {/* Game Over Overlay */}
-                  {gameState.isGameOver && (
-                    <div className="absolute inset-0 bg-cosmic-black/80 flex items-center justify-center rounded-lg">
-                      <div className="text-center">
-                        <h3 className="text-2xl font-bold text-lava-red mb-2">Game Over!</h3>
-                        <p className="text-cosmic-white/70 mb-2">Score: {gameState.score}</p>
-                        <p className="text-cosmic-white/70 mb-4">Distance: {gameState.distance}m</p>
-                        <Button onClick={resetGame} className="bg-eclipse-gold hover:bg-eclipse-gold/80">
-                          Play Again
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Start Game Overlay */}
                   {!gameState.isPlaying && !gameState.isGameOver && gameState.score === 0 && (
                     <div className="absolute inset-0 bg-cosmic-black/80 flex items-center justify-center rounded-lg">
                       <div className="text-center">
-                        <h3 className="text-2xl font-bold text-eclipse-gold mb-2">Ready to Run?</h3>
-                        <p className="text-cosmic-white/70 mb-4">Choose your character and start your temple adventure!</p>
+                        <h3 className="text-2xl font-bold text-eclipse-gold mb-2">Ready for Eclipse Realms?</h3>
+                        <p className="text-cosmic-white/70 mb-4">Choose your character and start your cosmic adventure!</p>
                       </div>
                     </div>
                   )}
@@ -552,24 +685,13 @@ const TempleRunGame = () => {
 
                 {/* Game Controls */}
                 <div className="flex gap-2 mt-4 justify-center">
-                  {!gameState.isPlaying && !gameState.isGameOver ? (
-                    <Button 
-                      onClick={startGame}
-                      className="bg-gradient-to-r from-eclipse-gold to-rift-cyan hover:from-eclipse-gold/80 hover:to-rift-cyan/80 text-cosmic-white border-0"
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      Start Game
-                    </Button>
-                  ) : gameState.isPlaying ? (
-                    <Button 
-                      onClick={pauseGame}
-                      variant="outline"
-                      className="border-mystic-purple/40 text-mystic-purple hover:bg-mystic-purple/20"
-                    >
-                      <Pause className="w-4 h-4 mr-2" />
-                      Pause
-                    </Button>
-                  ) : null}
+                  <Button 
+                    onClick={startGame}
+                    className="bg-gradient-to-r from-eclipse-gold to-rift-cyan hover:from-eclipse-gold/80 hover:to-rift-cyan/80 text-cosmic-white border-0"
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    Play Eclipse Realms
+                  </Button>
                   
                   <Button 
                     onClick={resetGame}
@@ -585,7 +707,7 @@ const TempleRunGame = () => {
                 <div className="mt-4 text-center text-sm text-cosmic-white/60 space-y-1">
                   <p>Desktop: Arrow Keys / A,D: Move • Spacebar / W: Jump</p>
                   <p>Mobile: Use the control buttons above</p>
-                  <p>Collect coins • Avoid red obstacles • Run as far as you can!</p>
+                  <p>Collect star coins • Avoid cosmic obstacles • Master the Eclipse Realms!</p>
                 </div>
               </CardContent>
             </Card>
