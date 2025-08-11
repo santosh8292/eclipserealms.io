@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Text, Box, Sphere, Cylinder } from "@react-three/drei";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +11,11 @@ import {
   Zap, 
   Heart,
   Trophy,
-  Coins
+  Coins,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp
 } from "lucide-react";
-import * as THREE from 'three';
 
 interface GameState {
   health: number;
@@ -27,280 +27,27 @@ interface GameState {
   playerLane: number; // -1, 0, 1 (left, center, right)
   selectedCharacter: string;
   speed: number;
+  playerY: number;
+  isJumping: boolean;
+}
+
+interface GameObject {
+  id: number;
+  x: number;
+  y: number;
+  type: string;
 }
 
 const characters = [
-  { id: "shadowmancer", name: "Shadowmancer", color: "#8B5CF6", ability: "Shadow Dash" },
-  { id: "riftblade", name: "Riftblade", color: "#06B6D4", ability: "Time Slice" },
-  { id: "techshaman", name: "Tech Shaman", color: "#F59E0B", ability: "Digital Shield" },
-  { id: "chronoarcher", name: "Chrono Archer", color: "#EF4444", ability: "Time Slow" }
+  { id: "shadowmancer", name: "Shadowmancer", color: "#8B5CF6", ability: "Shadow Dash", emoji: "🌙" },
+  { id: "riftblade", name: "Riftblade", color: "#06B6D4", ability: "Time Slice", emoji: "⚔️" },
+  { id: "techshaman", name: "Tech Shaman", color: "#F59E0B", ability: "Digital Shield", emoji: "🔮" },
+  { id: "chronoarcher", name: "Chrono Archer", color: "#EF4444", ability: "Time Slow", emoji: "🏹" }
 ];
 
-// Player component
-function Player({ position, selectedCharacter, isJumping }: { position: [number, number, number], selectedCharacter: string, isJumping: boolean }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const character = characters.find(c => c.id === selectedCharacter) || characters[0];
-  
-  useFrame((state) => {
-    if (meshRef.current) {
-      // Bobbing animation while running
-      meshRef.current.position.y = position[1] + (isJumping ? 0 : Math.sin(state.clock.elapsedTime * 8) * 0.1);
-      meshRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 4) * 0.1;
-    }
-  });
-
-  return (
-    <group position={position}>
-      <Box ref={meshRef} args={[0.8, 1.6, 0.8]} position={[0, 0.8, 0]}>
-        <meshStandardMaterial color={character.color} />
-      </Box>
-      <Text 
-        position={[0, 2.5, 0]} 
-        fontSize={0.3} 
-        color={character.color}
-        anchorX="center" 
-        anchorY="middle"
-      >
-        {character.name}
-      </Text>
-    </group>
-  );
-}
-
-// Obstacle component
-function Obstacle({ position, type }: { position: [number, number, number], type: string }) {
-  return (
-    <Box args={[1, 2, 1]} position={position}>
-      <meshStandardMaterial color={type === 'wall' ? '#8B4513' : '#FF0000'} />
-    </Box>
-  );
-}
-
-// Coin component
-function Coin({ position }: { position: [number, number, number] }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y = state.clock.elapsedTime * 3;
-      meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 4) * 0.2;
-    }
-  });
-
-  return (
-    <Cylinder ref={meshRef} args={[0.3, 0.3, 0.1, 8]} position={position} rotation={[Math.PI / 2, 0, 0]}>
-      <meshStandardMaterial color="#FFD700" />
-    </Cylinder>
-  );
-}
-
-// Ground segment component
-function GroundSegment({ position }: { position: [number, number, number] }) {
-  return (
-    <Box args={[6, 0.2, 20]} position={position}>
-      <meshStandardMaterial color="#8B4513" />
-    </Box>
-  );
-}
-
-// Game scene component
-function GameScene({ gameState, onCoinCollect, onObstacleHit }: {
-  gameState: GameState;
-  onCoinCollect: () => void;
-  onObstacleHit: () => void;
-}) {
-  const [obstacles, setObstacles] = useState<Array<{id: number, position: [number, number, number], type: string}>>([]);
-  const [coins, setCoins] = useState<Array<{id: number, position: [number, number, number]}>>([]);
-  const [groundSegments, setGroundSegments] = useState<Array<{id: number, position: [number, number, number]}>>([]);
-  const [playerY, setPlayerY] = useState(0);
-  const [isJumping, setIsJumping] = useState(false);
-  
-  const cameraRef = useRef<THREE.Camera>(null);
-  const { camera } = useThree();
-
-  // Initialize ground segments
-  useEffect(() => {
-    const segments = [];
-    for (let i = 0; i < 10; i++) {
-      segments.push({
-        id: i,
-        position: [0, -0.1, -i * 20] as [number, number, number]
-      });
-    }
-    setGroundSegments(segments);
-  }, []);
-
-  // Game loop
-  useFrame((state, delta) => {
-    if (!gameState.isPlaying) return;
-
-    const speed = gameState.speed;
-    
-    // Move camera forward
-    camera.position.z += speed * delta;
-    
-    // Update obstacles
-    setObstacles(prev => {
-      const updated = prev.map(obstacle => ({
-        ...obstacle,
-        position: [obstacle.position[0], obstacle.position[1], obstacle.position[2] + speed * delta] as [number, number, number]
-      })).filter(obstacle => obstacle.position[2] < 10);
-
-      // Add new obstacles
-      if (Math.random() < 0.02) {
-        const lanes = [-2, 0, 2];
-        const lane = lanes[Math.floor(Math.random() * lanes.length)];
-        updated.push({
-          id: Date.now(),
-          position: [lane, 1, camera.position.z - 50] as [number, number, number],
-          type: 'wall'
-        });
-      }
-
-      return updated;
-    });
-
-    // Update coins
-    setCoins(prev => {
-      const updated = prev.map(coin => ({
-        ...coin,
-        position: [coin.position[0], coin.position[1], coin.position[2] + speed * delta] as [number, number, number]
-      })).filter(coin => coin.position[2] < 10);
-
-      // Add new coins
-      if (Math.random() < 0.03) {
-        const lanes = [-2, 0, 2];
-        const lane = lanes[Math.floor(Math.random() * lanes.length)];
-        updated.push({
-          id: Date.now(),
-          position: [lane, 1.5, camera.position.z - 40] as [number, number, number]
-        });
-      }
-
-      return updated;
-    });
-
-    // Update ground segments
-    setGroundSegments(prev => {
-      const updated = prev.map(segment => ({
-        ...segment,
-        position: [segment.position[0], segment.position[1], segment.position[2] + speed * delta] as [number, number, number]
-      }));
-
-      // Add new ground segments if needed
-      const furthestZ = Math.min(...updated.map(s => s.position[2]));
-      if (furthestZ > camera.position.z - 100) {
-        updated.push({
-          id: Date.now(),
-          position: [0, -0.1, furthestZ - 20] as [number, number, number]
-        });
-      }
-
-      return updated.filter(segment => segment.position[2] < camera.position.z + 20);
-    });
-
-    // Update player jumping
-    if (isJumping) {
-      setPlayerY(prev => {
-        const newY = prev + (prev < 2 ? 8 * delta : -8 * delta);
-        if (newY <= 0) {
-          setIsJumping(false);
-          return 0;
-        }
-        return newY;
-      });
-    }
-
-    // Check collisions
-    const playerPos = [gameState.playerLane * 2, playerY, camera.position.z];
-    
-    // Check obstacle collisions
-    obstacles.forEach(obstacle => {
-      const distance = Math.sqrt(
-        Math.pow(obstacle.position[0] - playerPos[0], 2) +
-        Math.pow(obstacle.position[2] - playerPos[2], 2)
-      );
-      if (distance < 1.5 && playerPos[1] < 1.5) {
-        onObstacleHit();
-      }
-    });
-
-    // Check coin collisions
-    coins.forEach(coin => {
-      const distance = Math.sqrt(
-        Math.pow(coin.position[0] - playerPos[0], 2) +
-        Math.pow(coin.position[2] - playerPos[2], 2)
-      );
-      if (distance < 1) {
-        onCoinCollect();
-        setCoins(prev => prev.filter(c => c.id !== coin.id));
-      }
-    });
-  });
-
-  const jump = useCallback(() => {
-    if (!isJumping && gameState.isPlaying) {
-      setIsJumping(true);
-    }
-  }, [isJumping, gameState.isPlaying]);
-
-  // Controls
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (!gameState.isPlaying) return;
-      
-      switch (e.key) {
-        case 'ArrowLeft':
-        case 'a':
-          // Move left logic handled by parent
-          break;
-        case 'ArrowRight':
-        case 'd':
-          // Move right logic handled by parent
-          break;
-        case ' ':
-        case 'ArrowUp':
-        case 'w':
-          e.preventDefault();
-          jump();
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [gameState.isPlaying, jump]);
-
-  return (
-    <>
-      {/* Lighting */}
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[10, 10, 5]} intensity={1} />
-      
-      {/* Player */}
-      <Player 
-        position={[gameState.playerLane * 2, playerY, 0]} 
-        selectedCharacter={gameState.selectedCharacter}
-        isJumping={isJumping}
-      />
-      
-      {/* Ground segments */}
-      {groundSegments.map(segment => (
-        <GroundSegment key={segment.id} position={segment.position} />
-      ))}
-      
-      {/* Obstacles */}
-      {obstacles.map(obstacle => (
-        <Obstacle key={obstacle.id} position={obstacle.position} type={obstacle.type} />
-      ))}
-      
-      {/* Coins */}
-      {coins.map(coin => (
-        <Coin key={coin.id} position={coin.position} />
-      ))}
-    </>
-  );
-}
+const GAME_WIDTH = 600;
+const GAME_HEIGHT = 400;
+const LANE_WIDTH = GAME_WIDTH / 3;
 
 const TempleRunGame = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -310,26 +57,290 @@ const TempleRunGame = () => {
     distance: 0,
     isPlaying: false,
     isGameOver: false,
-    playerLane: 0,
+    playerLane: 0, // Center lane
     selectedCharacter: "shadowmancer",
-    speed: 10
+    speed: 3,
+    playerY: GAME_HEIGHT - 80,
+    isJumping: false
   });
 
-  // Game loop for score and distance
+  const [obstacles, setObstacles] = useState<GameObject[]>([]);
+  const [coins, setCoins] = useState<GameObject[]>([]);
+  const [backgrounds, setBackgrounds] = useState<GameObject[]>([]);
+  const gameLoopRef = useRef<number>();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const selectedChar = characters.find(c => c.id === gameState.selectedCharacter) || characters[0];
+
+  // Initialize background elements
+  useEffect(() => {
+    const bgElements = [];
+    for (let i = 0; i < 10; i++) {
+      bgElements.push({
+        id: i,
+        x: Math.random() * GAME_WIDTH,
+        y: Math.random() * GAME_HEIGHT,
+        type: 'temple'
+      });
+    }
+    setBackgrounds(bgElements);
+  }, []);
+
+  // Game drawing function
+  const drawGame = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas with temple background
+    const gradient = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+    gradient.addColorStop(0, '#4C1D95');
+    gradient.addColorStop(1, '#1F2937');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // Draw temple background elements
+    ctx.fillStyle = '#6B7280';
+    backgrounds.forEach(bg => {
+      ctx.fillRect(bg.x, bg.y, 20, 30);
+    });
+
+    // Draw lane dividers
+    ctx.strokeStyle = '#F59E0B';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 10]);
+    ctx.beginPath();
+    ctx.moveTo(LANE_WIDTH, 0);
+    ctx.lineTo(LANE_WIDTH, GAME_HEIGHT);
+    ctx.moveTo(LANE_WIDTH * 2, 0);
+    ctx.lineTo(LANE_WIDTH * 2, GAME_HEIGHT);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw player
+    const playerX = (gameState.playerLane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 20;
+    ctx.fillStyle = selectedChar.color;
+    ctx.fillRect(playerX, gameState.playerY, 40, 60);
+    
+    // Add character emoji
+    ctx.font = '30px Arial';
+    ctx.fillText(selectedChar.emoji, playerX + 5, gameState.playerY - 10);
+
+    // Draw player name
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '12px Arial';
+    ctx.fillText(selectedChar.name, playerX - 10, gameState.playerY + 80);
+
+    // Draw obstacles
+    ctx.fillStyle = '#DC2626';
+    obstacles.forEach(obstacle => {
+      ctx.fillRect(obstacle.x, obstacle.y, 40, 60);
+      // Add danger symbol
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '20px Arial';
+      ctx.fillText('⚠️', obstacle.x + 10, obstacle.y + 30);
+      ctx.fillStyle = '#DC2626';
+    });
+
+    // Draw coins
+    ctx.fillStyle = '#FFD700';
+    coins.forEach(coin => {
+      ctx.beginPath();
+      ctx.arc(coin.x + 15, coin.y + 15, 15, 0, Math.PI * 2);
+      ctx.fill();
+      // Add coin symbol
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '16px Arial';
+      ctx.fillText('💰', coin.x + 5, coin.y + 20);
+      ctx.fillStyle = '#FFD700';
+    });
+
+    // Draw UI overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, GAME_WIDTH, 40);
+    
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '16px Arial';
+    ctx.fillText(`Score: ${gameState.score}`, 10, 25);
+    ctx.fillText(`Coins: ${gameState.coins}`, 150, 25);
+    ctx.fillText(`Distance: ${gameState.distance}m`, 280, 25);
+    ctx.fillText(`Health: ${gameState.health}%`, 450, 25);
+
+  }, [gameState, obstacles, coins, backgrounds, selectedChar]);
+
+  // Game loop
   useEffect(() => {
     if (!gameState.isPlaying) return;
 
-    const interval = setInterval(() => {
-      setGameState(prev => ({
-        ...prev,
-        distance: prev.distance + 1,
-        score: prev.score + 1,
-        speed: Math.min(20, prev.speed + 0.01) // Gradually increase speed
-      }));
-    }, 100);
+    const gameLoop = () => {
+      // Update game state
+      setGameState(prev => {
+        const newState = { ...prev };
+        
+        // Handle jumping
+        if (newState.isJumping) {
+          if (newState.playerY > GAME_HEIGHT - 160) {
+            newState.playerY -= 8;
+          } else {
+            newState.isJumping = false;
+          }
+        } else if (newState.playerY < GAME_HEIGHT - 80) {
+          newState.playerY += 8;
+        } else {
+          newState.playerY = GAME_HEIGHT - 80;
+        }
 
-    return () => clearInterval(interval);
-  }, [gameState.isPlaying]);
+        // Update distance and score
+        newState.distance += 1;
+        newState.score += 1;
+        newState.speed = Math.min(8, 3 + newState.distance / 100);
+
+        return newState;
+      });
+
+      // Move obstacles
+      setObstacles(prev => {
+        const updated = prev.map(obs => ({
+          ...obs,
+          y: obs.y + gameState.speed
+        })).filter(obs => obs.y < GAME_HEIGHT + 100);
+
+        // Add new obstacles
+        if (Math.random() < 0.02) {
+          const lane = Math.floor(Math.random() * 3) - 1;
+          const laneX = (lane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 20;
+          updated.push({
+            id: Date.now(),
+            x: laneX,
+            y: -60,
+            type: 'obstacle'
+          });
+        }
+
+        return updated;
+      });
+
+      // Move coins
+      setCoins(prev => {
+        const updated = prev.map(coin => ({
+          ...coin,
+          y: coin.y + gameState.speed
+        })).filter(coin => coin.y < GAME_HEIGHT + 50);
+
+        // Add new coins
+        if (Math.random() < 0.015) {
+          const lane = Math.floor(Math.random() * 3) - 1;
+          const laneX = (lane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 15;
+          updated.push({
+            id: Date.now(),
+            x: laneX,
+            y: -30,
+            type: 'coin'
+          });
+        }
+
+        return updated;
+      });
+
+      // Move background elements
+      setBackgrounds(prev => prev.map(bg => ({
+        ...bg,
+        y: bg.y + gameState.speed * 0.5
+      })).filter(bg => bg.y < GAME_HEIGHT + 50));
+
+      drawGame();
+      gameLoopRef.current = requestAnimationFrame(gameLoop);
+    };
+
+    gameLoopRef.current = requestAnimationFrame(gameLoop);
+    return () => {
+      if (gameLoopRef.current) {
+        cancelAnimationFrame(gameLoopRef.current);
+      }
+    };
+  }, [gameState.isPlaying, gameState.speed, drawGame]);
+
+  // Collision detection
+  useEffect(() => {
+    if (!gameState.isPlaying) return;
+
+    const playerX = (gameState.playerLane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 20;
+    
+    // Check obstacle collisions
+    obstacles.forEach(obstacle => {
+      if (obstacle.y > gameState.playerY - 60 && 
+          obstacle.y < gameState.playerY + 60 &&
+          Math.abs(obstacle.x - playerX) < 40) {
+        setGameState(prev => {
+          const newHealth = prev.health - 20;
+          if (newHealth <= 0) {
+            toast({
+              title: "Game Over!",
+              description: `Final Score: ${prev.score} | Distance: ${prev.distance}m`,
+              variant: "destructive"
+            });
+            return { ...prev, health: 0, isPlaying: false, isGameOver: true };
+          }
+          return { ...prev, health: newHealth };
+        });
+        setObstacles(prev => prev.filter(obs => obs.id !== obstacle.id));
+      }
+    });
+
+    // Check coin collisions
+    coins.forEach(coin => {
+      if (coin.y > gameState.playerY - 30 && 
+          coin.y < gameState.playerY + 60 &&
+          Math.abs(coin.x - playerX) < 35) {
+        setGameState(prev => ({
+          ...prev,
+          coins: prev.coins + 1,
+          score: prev.score + 10
+        }));
+        setCoins(prev => prev.filter(c => c.id !== coin.id));
+      }
+    });
+  }, [obstacles, coins, gameState.playerY, gameState.playerLane, gameState.isPlaying]);
+
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!gameState.isPlaying) return;
+      
+      switch (e.key) {
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          setGameState(prev => ({
+            ...prev,
+            playerLane: Math.max(-1, prev.playerLane - 1)
+          }));
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          setGameState(prev => ({
+            ...prev,
+            playerLane: Math.min(1, prev.playerLane + 1)
+          }));
+          break;
+        case ' ':
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          e.preventDefault();
+          if (!gameState.isJumping) {
+            setGameState(prev => ({ ...prev, isJumping: true }));
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameState.isPlaying, gameState.isJumping]);
 
   const startGame = () => {
     setGameState(prev => ({
@@ -337,6 +348,8 @@ const TempleRunGame = () => {
       isPlaying: true,
       isGameOver: false
     }));
+    setObstacles([]);
+    setCoins([]);
     toast({
       title: "Temple Run Started!",
       description: "Use arrow keys to move, spacebar to jump!",
@@ -357,67 +370,13 @@ const TempleRunGame = () => {
       isGameOver: false,
       playerLane: 0,
       selectedCharacter: gameState.selectedCharacter,
-      speed: 10
+      speed: 3,
+      playerY: GAME_HEIGHT - 80,
+      isJumping: false
     });
+    setObstacles([]);
+    setCoins([]);
   };
-
-  const movePlayer = (direction: 'left' | 'right') => {
-    if (!gameState.isPlaying) return;
-    
-    setGameState(prev => ({
-      ...prev,
-      playerLane: direction === 'left' 
-        ? Math.max(-1, prev.playerLane - 1)
-        : Math.min(1, prev.playerLane + 1)
-    }));
-  };
-
-  const collectCoin = () => {
-    setGameState(prev => ({
-      ...prev,
-      coins: prev.coins + 1,
-      score: prev.score + 10
-    }));
-  };
-
-  const hitObstacle = () => {
-    setGameState(prev => {
-      const newHealth = prev.health - 25;
-      if (newHealth <= 0) {
-        toast({
-          title: "Game Over!",
-          description: `Final Score: ${prev.score} | Distance: ${prev.distance}m`,
-          variant: "destructive"
-        });
-        return {
-          ...prev,
-          health: 0,
-          isPlaying: false,
-          isGameOver: true
-        };
-      }
-      return { ...prev, health: newHealth };
-    });
-  };
-
-  // Keyboard controls
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case 'ArrowLeft':
-        case 'a':
-          movePlayer('left');
-          break;
-        case 'ArrowRight':
-        case 'd':
-          movePlayer('right');
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState.isPlaying]);
 
   return (
     <section className="py-24 px-4 sm:px-6 lg:px-8 relative">
@@ -462,8 +421,13 @@ const TempleRunGame = () => {
                     }`}
                     disabled={gameState.isPlaying}
                   >
-                    <div className="text-cosmic-white font-semibold text-sm">{character.name}</div>
-                    <div className="text-cosmic-white/60 text-xs">{character.ability}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{character.emoji}</span>
+                      <div>
+                        <div className="text-cosmic-white font-semibold text-sm">{character.name}</div>
+                        <div className="text-cosmic-white/60 text-xs">{character.ability}</div>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </CardContent>
@@ -521,22 +485,21 @@ const TempleRunGame = () => {
               <CardHeader>
                 <CardTitle className="text-cosmic-white flex items-center gap-2">
                   <Zap className="w-5 h-5 text-eclipse-gold" />
-                  Temple Run - 3D Adventure
+                  Temple Run - Eclipse Adventure
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="relative bg-cosmic-black border-2 border-eclipse-gold/30 rounded-lg h-96 overflow-hidden">
-                  <Canvas camera={{ position: [0, 3, 5], fov: 75 }}>
-                    <GameScene 
-                      gameState={gameState}
-                      onCoinCollect={collectCoin}
-                      onObstacleHit={hitObstacle}
-                    />
-                  </Canvas>
+                <div className="relative">
+                  <canvas
+                    ref={canvasRef}
+                    width={GAME_WIDTH}
+                    height={GAME_HEIGHT}
+                    className="border-2 border-eclipse-gold/30 rounded-lg bg-cosmic-black mx-auto block"
+                  />
 
                   {/* Game Over Overlay */}
                   {gameState.isGameOver && (
-                    <div className="absolute inset-0 bg-cosmic-black/80 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-cosmic-black/80 flex items-center justify-center rounded-lg">
                       <div className="text-center">
                         <h3 className="text-2xl font-bold text-lava-red mb-2">Game Over!</h3>
                         <p className="text-cosmic-white/70 mb-2">Score: {gameState.score}</p>
@@ -550,13 +513,41 @@ const TempleRunGame = () => {
 
                   {/* Start Game Overlay */}
                   {!gameState.isPlaying && !gameState.isGameOver && gameState.score === 0 && (
-                    <div className="absolute inset-0 bg-cosmic-black/80 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-cosmic-black/80 flex items-center justify-center rounded-lg">
                       <div className="text-center">
                         <h3 className="text-2xl font-bold text-eclipse-gold mb-2">Ready to Run?</h3>
-                        <p className="text-cosmic-white/70 mb-4">Click Start to begin your temple adventure</p>
+                        <p className="text-cosmic-white/70 mb-4">Choose your character and start your temple adventure!</p>
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* Mobile controls */}
+                <div className="grid grid-cols-3 gap-2 mt-4 md:hidden">
+                  <Button
+                    onClick={() => setGameState(prev => ({ ...prev, playerLane: Math.max(-1, prev.playerLane - 1) }))}
+                    variant="outline"
+                    className="border-mystic-purple/40 text-mystic-purple"
+                    disabled={!gameState.isPlaying}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    onClick={() => !gameState.isJumping && setGameState(prev => ({ ...prev, isJumping: true }))}
+                    variant="outline"
+                    className="border-eclipse-gold/40 text-eclipse-gold"
+                    disabled={!gameState.isPlaying}
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    onClick={() => setGameState(prev => ({ ...prev, playerLane: Math.min(1, prev.playerLane + 1) }))}
+                    variant="outline"
+                    className="border-mystic-purple/40 text-mystic-purple"
+                    disabled={!gameState.isPlaying}
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
                 </div>
 
                 {/* Game Controls */}
@@ -592,8 +583,9 @@ const TempleRunGame = () => {
 
                 {/* Controls Guide */}
                 <div className="mt-4 text-center text-sm text-cosmic-white/60 space-y-1">
-                  <p>Arrow Keys / A,D: Move Left/Right • Spacebar / W: Jump</p>
-                  <p>Collect coins • Avoid obstacles • Run as far as you can!</p>
+                  <p>Desktop: Arrow Keys / A,D: Move • Spacebar / W: Jump</p>
+                  <p>Mobile: Use the control buttons above</p>
+                  <p>Collect coins • Avoid red obstacles • Run as far as you can!</p>
                 </div>
               </CardContent>
             </Card>
