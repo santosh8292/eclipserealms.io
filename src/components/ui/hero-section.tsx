@@ -38,9 +38,9 @@ const HeroSection = () => {
         
         {/* Game description */}
         <p className="text-lg text-cosmic-white/80 mb-12 max-w-3xl mx-auto leading-relaxed">
-          Become a Realmwalker and traverse fractured realities in this epic cross-platform 
-          Action-RPG. Explore procedurally generated worlds, master unique abilities, 
-          and shape a multiverse-spanning narrative. <span className="text-eclipse-gold font-semibold">Play for free!</span>
+          Run through mystical Eclipse Realms in this epic 3D endless runner! 
+          Choose unique characters, avoid obstacles, collect cosmic coins, 
+          and see how far you can go. <span className="text-eclipse-gold font-semibold">Play for free!</span>
         </p>
 
         {/* Action buttons */}
@@ -53,12 +53,12 @@ const HeroSection = () => {
           >
             <a href="#game">
               <Play className="mr-2 h-5 w-5" />
-              Play Now - Free
+              Play Temple Run Now
             </a>
           </Button>
           <Button variant="cosmic" size="lg" className="text-lg px-8 py-6">
             <Download className="mr-2 h-5 w-5" />
-            Download Game
+            Download Full Game
           </Button>
         </div>
 
