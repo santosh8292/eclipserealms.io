@@ -1,8 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Text, Box, Sphere, Plane, Stars, Environment, Float, PerspectiveCamera } from '@react-three/drei';
+import * as THREE from 'three';
 import { 
   Play, 
   Pause, 
@@ -14,8 +17,26 @@ import {
   Coins,
   ArrowLeft,
   ArrowRight,
-  ArrowUp
+  ArrowUp,
+  X
 } from "lucide-react";
+
+interface Character {
+  name: string;
+  color: string;
+  abilities: string[];
+  model: string;
+  emoji: string;
+}
+
+interface Realm {
+  name: string;
+  theme: string;
+  bgColor: string;
+  fogColor: string;
+  description: string;
+  ambientColor: string;
+}
 
 interface GameState {
   health: number;
@@ -25,32 +46,272 @@ interface GameState {
   isPlaying: boolean;
   isGameOver: boolean;
   isFullscreen: boolean;
-  playerLane: number; // -1, 0, 1 (left, center, right)
+  playerLane: number;
   selectedCharacter: string;
+  selectedRealm: number;
   speed: number;
   playerY: number;
   isJumping: boolean;
 }
 
-interface GameObject {
+interface GameObject3D {
   id: number;
-  x: number;
-  y: number;
-  type: string;
+  position: THREE.Vector3;
+  type: 'obstacle' | 'coin' | 'enemy' | 'powerup';
+  lane: number;
 }
 
-const characters = [
-  { id: "pikachu", name: "Pikachu", color: "#FFD700", ability: "Thunder Bolt", emoji: "⚡" },
-  { id: "doraemon", name: "Doraemon", color: "#0066CC", ability: "Magic Pocket", emoji: "🤖" },
-  { id: "tom", name: "Tom", color: "#A0A0A0", ability: "Cat Speed", emoji: "🐱" },
-  { id: "jerry", name: "Jerry", color: "#8B4513", ability: "Mouse Agility", emoji: "🐭" }
+const characters: Character[] = [
+  {
+    name: "Shadowmancer",
+    color: "#8B00FF",
+    abilities: ["Shadow Step", "Dark Magic", "Void Walk"],
+    model: "shadow",
+    emoji: "🌙"
+  },
+  {
+    name: "Riftblade", 
+    color: "#FF4500",
+    abilities: ["Dimensional Cut", "Portal Strike", "Energy Slash"],
+    model: "blade",
+    emoji: "⚔️"
+  },
+  {
+    name: "Tech Shaman",
+    color: "#00FFFF", 
+    abilities: ["Cyber Magic", "Tech Fusion", "Digital Storm"],
+    model: "tech",
+    emoji: "🔮"
+  },
+  {
+    name: "Chrono-Archer",
+    color: "#FFD700",
+    abilities: ["Time Arrow", "Temporal Shift", "Future Sight"],
+    model: "archer",
+    emoji: "🏹"
+  }
 ];
 
-const GAME_WIDTH = 800;
-const GAME_HEIGHT = 600;
-const LANE_WIDTH = GAME_WIDTH / 3;
+const realms: Realm[] = [
+  {
+    name: "Frozen Nexus",
+    theme: "ice",
+    bgColor: "#87CEEB",
+    fogColor: "#B0E0E6",
+    ambientColor: "#E0F6FF",
+    description: "A crystalline realm of eternal winter where ice shards float through the air"
+  },
+  {
+    name: "Celestial Sanctum", 
+    theme: "celestial",
+    bgColor: "#191970",
+    fogColor: "#483D8B",
+    ambientColor: "#E6E6FA",
+    description: "A divine realm among the stars where cosmic energy flows"
+  },
+  {
+    name: "Lava Forge",
+    theme: "fire",
+    bgColor: "#FF4500",
+    fogColor: "#FF6347",
+    ambientColor: "#FFE4E1",
+    description: "A volcanic realm of molten power with rivers of lava"
+  },
+  {
+    name: "Cyber Core",
+    theme: "cyber",
+    bgColor: "#000011",
+    fogColor: "#0F0F23",
+    ambientColor: "#E0FFFF",
+    description: "A digital realm of infinite data streams and neon lights"
+  }
+];
 
-const TempleRunGame = () => {
+// 3D Character Component
+function Character3D({ character, position, isPlayer = false }: { character: Character, position: THREE.Vector3, isPlayer?: boolean }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    if (meshRef.current && isPlayer) {
+      meshRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 2) * 0.1;
+    }
+  });
+
+  return (
+    <group position={position}>
+      {/* Character Body */}
+      <Box ref={meshRef} args={[0.8, 1.6, 0.4]} position={[0, 0.8, 0]}>
+        <meshStandardMaterial color={character.color} metalness={0.3} roughness={0.7} />
+      </Box>
+      
+      {/* Character Head */}
+      <Sphere args={[0.3]} position={[0, 1.8, 0]}>
+        <meshStandardMaterial color={character.color} metalness={0.2} roughness={0.8} />
+      </Sphere>
+      
+      {/* Character Glow Effect */}
+      <Sphere args={[1.2]} position={[0, 1, 0]}>
+        <meshBasicMaterial color={character.color} transparent opacity={0.1} />
+      </Sphere>
+      
+      {/* Character Name */}
+      <Text
+        position={[0, 2.5, 0]}
+        fontSize={0.3}
+        color="white"
+        anchorX="center"
+        anchorY="middle"
+      >
+        {character.name}
+      </Text>
+    </group>
+  );
+}
+
+// 3D Obstacle Component
+function Obstacle3D({ position, type }: { position: THREE.Vector3, type: string }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y += 0.02;
+    }
+  });
+
+  const color = type === 'enemy' ? '#FF0000' : '#8B0000';
+  
+  return (
+    <Box ref={meshRef} args={[1, 2, 1]} position={position}>
+      <meshStandardMaterial color={color} metalness={0.8} roughness={0.2} />
+    </Box>
+  );
+}
+
+// 3D Coin Component
+function Coin3D({ position }: { position: THREE.Vector3 }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y += 0.05;
+      meshRef.current.position.y = position.y + Math.sin(state.clock.elapsedTime * 3) * 0.2;
+    }
+  });
+
+  return (
+    <Float speed={2} rotationIntensity={1} floatIntensity={0.5}>
+      <Sphere ref={meshRef} args={[0.3]} position={position}>
+        <meshStandardMaterial color="#FFD700" metalness={1} roughness={0.1} />
+      </Sphere>
+    </Float>
+  );
+}
+
+// 3D Game World Component
+function GameWorld3D({ gameState, obstacles, coins, selectedCharacter, selectedRealm }: {
+  gameState: GameState;
+  obstacles: GameObject3D[];
+  coins: GameObject3D[];
+  selectedCharacter: Character;
+  selectedRealm: Realm;
+}) {
+  const { camera } = useThree();
+  
+  useFrame(() => {
+    // Camera follows player
+    const targetX = gameState.playerLane * 2;
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetX, 0.1);
+    camera.position.y = 8 + gameState.playerY * 0.1;
+    camera.position.z = 10;
+    camera.lookAt(targetX, 0, -5);
+  });
+
+  return (
+    <>
+      {/* Lighting */}
+      <ambientLight intensity={0.4} color={selectedRealm.ambientColor} />
+      <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
+      <pointLight position={[0, 10, 0]} intensity={0.5} color={selectedRealm.bgColor} />
+      
+      {/* Environment */}
+      <Stars radius={300} depth={60} count={1000} factor={7} saturation={0} fade />
+      
+      {/* Ground/Platform */}
+      <Plane args={[20, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, -10]}>
+        <meshStandardMaterial color="#2D1B69" metalness={0.3} roughness={0.7} />
+      </Plane>
+      
+      {/* Lane Markers */}
+      {[-2, 0, 2].map((x, i) => (
+        <Box key={i} args={[0.1, 0.2, 100]} position={[x, -0.8, -10]}>
+          <meshStandardMaterial color="#FFD700" emissive="#FFD700" emissiveIntensity={0.2} />
+        </Box>
+      ))}
+      
+      {/* Player Character */}
+      <Character3D 
+        character={selectedCharacter} 
+        position={new THREE.Vector3(gameState.playerLane * 2, gameState.playerY, 0)}
+        isPlayer={true}
+      />
+      
+      {/* Obstacles */}
+      {obstacles.map((obstacle) => (
+        <Obstacle3D 
+          key={obstacle.id} 
+          position={obstacle.position} 
+          type={obstacle.type}
+        />
+      ))}
+      
+      {/* Coins */}
+      {coins.map((coin) => (
+        <Coin3D key={coin.id} position={coin.position} />
+      ))}
+      
+      {/* Realm-specific Effects */}
+      {selectedRealm.theme === 'ice' && (
+        <>
+          {Array.from({ length: 50 }).map((_, i) => (
+            <Float key={i} speed={1 + Math.random()} rotationIntensity={0.5}>
+              <Box 
+                args={[0.1, 0.1, 0.1]} 
+                position={[
+                  (Math.random() - 0.5) * 20,
+                  Math.random() * 15,
+                  (Math.random() - 0.5) * 50
+                ]}
+              >
+                <meshStandardMaterial color="#87CEEB" transparent opacity={0.7} />
+              </Box>
+            </Float>
+          ))}
+        </>
+      )}
+      
+      {selectedRealm.theme === 'fire' && (
+        <>
+          {Array.from({ length: 30 }).map((_, i) => (
+            <Sphere 
+              key={i}
+              args={[0.2]} 
+              position={[
+                (Math.random() - 0.5) * 20,
+                Math.random() * 10,
+                (Math.random() - 0.5) * 50
+              ]}
+            >
+              <meshBasicMaterial color="#FF4500" transparent opacity={0.6} />
+            </Sphere>
+          ))}
+        </>
+      )}
+    </>
+  );
+}
+
+// Main Game Component
+const EclipseRealmsGame = () => {
   const [gameState, setGameState] = useState<GameState>({
     health: 100,
     coins: 0,
@@ -59,208 +320,93 @@ const TempleRunGame = () => {
     isPlaying: false,
     isGameOver: false,
     isFullscreen: false,
-    playerLane: 0, // Center lane
-    selectedCharacter: "pikachu",
-    speed: 3,
-      playerY: GAME_HEIGHT - 120,
+    playerLane: 0,
+    selectedCharacter: "shadow",
+    selectedRealm: 0,
+    speed: 2,
+    playerY: 0,
     isJumping: false
   });
 
-  const [obstacles, setObstacles] = useState<GameObject[]>([]);
-  const [coins, setCoins] = useState<GameObject[]>([]);
-  const [backgrounds, setBackgrounds] = useState<GameObject[]>([]);
+  const [obstacles, setObstacles] = useState<GameObject3D[]>([]);
+  const [coins, setCoins] = useState<GameObject3D[]>([]);
   const gameLoopRef = useRef<number>();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const selectedChar = characters.find(c => c.id === gameState.selectedCharacter) || characters[0];
+  const selectedChar = characters.find(c => c.model === gameState.selectedCharacter) || characters[0];
+  const selectedRealm = realms[gameState.selectedRealm];
 
-  // Initialize background elements
-  useEffect(() => {
-    const bgElements = [];
-    for (let i = 0; i < 10; i++) {
-      bgElements.push({
-        id: i,
-        x: Math.random() * GAME_WIDTH,
-        y: Math.random() * GAME_HEIGHT,
-        type: 'temple'
-      });
-    }
-    setBackgrounds(bgElements);
-  }, []);
-
-  // Game drawing function
-  const drawGame = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas with temple background
-    const gradient = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
-    gradient.addColorStop(0, '#4C1D95');
-    gradient.addColorStop(1, '#1F2937');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Draw temple background elements
-    ctx.fillStyle = '#6B7280';
-    backgrounds.forEach(bg => {
-      ctx.fillRect(bg.x, bg.y, 20, 30);
-    });
-
-    // Draw lane dividers
-    ctx.strokeStyle = '#F59E0B';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([10, 10]);
-    ctx.beginPath();
-    ctx.moveTo(LANE_WIDTH, 0);
-    ctx.lineTo(LANE_WIDTH, GAME_HEIGHT);
-    ctx.moveTo(LANE_WIDTH * 2, 0);
-    ctx.lineTo(LANE_WIDTH * 2, GAME_HEIGHT);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Draw player
-    const playerX = (gameState.playerLane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 20;
-    ctx.fillStyle = selectedChar.color;
-    ctx.fillRect(playerX, gameState.playerY, 40, 60);
-    
-    // Add character emoji
-    ctx.font = '30px Arial';
-    ctx.fillText(selectedChar.emoji, playerX + 5, gameState.playerY - 10);
-
-    // Draw player name
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '12px Arial';
-    ctx.fillText(selectedChar.name, playerX - 10, gameState.playerY + 80);
-
-    // Draw obstacles
-    ctx.fillStyle = '#DC2626';
-    obstacles.forEach(obstacle => {
-      ctx.fillRect(obstacle.x, obstacle.y, 40, 60);
-      // Add danger symbol
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '20px Arial';
-      ctx.fillText('⚠️', obstacle.x + 10, obstacle.y + 30);
-      ctx.fillStyle = '#DC2626';
-    });
-
-    // Draw coins
-    ctx.fillStyle = '#FFD700';
-    coins.forEach(coin => {
-      ctx.beginPath();
-      ctx.arc(coin.x + 15, coin.y + 15, 15, 0, Math.PI * 2);
-      ctx.fill();
-      // Add coin symbol
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '16px Arial';
-      ctx.fillText('💰', coin.x + 5, coin.y + 20);
-      ctx.fillStyle = '#FFD700';
-    });
-
-    // Draw UI overlay
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, GAME_WIDTH, 40);
-    
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '16px Arial';
-    ctx.fillText(`Score: ${gameState.score}`, 10, 25);
-    ctx.fillText(`Coins: ${gameState.coins}`, 150, 25);
-    ctx.fillText(`Distance: ${gameState.distance}m`, 280, 25);
-    ctx.fillText(`Health: ${gameState.health}%`, 450, 25);
-
-  }, [gameState, obstacles, coins, backgrounds, selectedChar]);
-
-  // Game loop - optimized for better performance
+  // Game loop
   useEffect(() => {
     if (!gameState.isPlaying) return;
 
-    let lastTime = 0;
-    const targetFPS = 60;
-    const frameInterval = 1000 / targetFPS;
-
-    const gameLoop = (currentTime: number) => {
-      if (currentTime - lastTime >= frameInterval) {
-        // Update game state
-        setGameState(prev => {
-          const newState = { ...prev };
-          
-          // Handle jumping
-          if (newState.isJumping) {
-            if (newState.playerY > GAME_HEIGHT - 200) {
-              newState.playerY -= 12;
-            } else {
-              newState.isJumping = false;
-            }
-          } else if (newState.playerY < GAME_HEIGHT - 120) {
-            newState.playerY += 12;
+    const gameLoop = () => {
+      // Update game state
+      setGameState(prev => {
+        const newState = { ...prev };
+        
+        // Handle jumping
+        if (newState.isJumping) {
+          if (newState.playerY < 3) {
+            newState.playerY += 0.3;
           } else {
-            newState.playerY = GAME_HEIGHT - 120;
+            newState.isJumping = false;
           }
+        } else if (newState.playerY > 0) {
+          newState.playerY -= 0.3;
+        } else {
+          newState.playerY = 0;
+        }
 
-          // Update distance and score
-          newState.distance += 1;
-          newState.score += 1;
-          newState.speed = Math.min(10, 4 + newState.distance / 150);
+        // Update distance and score
+        newState.distance += 0.5;
+        newState.score += 1;
+        newState.speed = Math.min(8, 2 + newState.distance / 100);
 
-          return newState;
-        });
+        return newState;
+      });
 
-        // Move obstacles - reduced frequency for better performance
-        setObstacles(prev => {
-          const updated = prev.map(obs => ({
-            ...obs,
-            y: obs.y + gameState.speed
-          })).filter(obs => obs.y < GAME_HEIGHT + 100);
+      // Move and spawn obstacles
+      setObstacles(prev => {
+        const updated = prev.map(obs => ({
+          ...obs,
+          position: new THREE.Vector3(obs.position.x, obs.position.y, obs.position.z + gameState.speed)
+        })).filter(obs => obs.position.z < 15);
 
-          // Add new obstacles less frequently
-          if (Math.random() < 0.015) {
-            const lane = Math.floor(Math.random() * 3) - 1;
-            const laneX = (lane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 30;
-            updated.push({
-              id: Date.now() + Math.random(),
-              x: laneX,
-              y: -80,
-              type: 'obstacle'
-            });
-          }
+        // Spawn new obstacles
+        if (Math.random() < 0.02) {
+          const lane = Math.floor(Math.random() * 3) - 1;
+          updated.push({
+            id: Date.now() + Math.random(),
+            position: new THREE.Vector3(lane * 2, 0, -30),
+            type: Math.random() < 0.7 ? 'obstacle' : 'enemy',
+            lane
+          });
+        }
 
-          return updated;
-        });
+        return updated;
+      });
 
-        // Move coins
-        setCoins(prev => {
-          const updated = prev.map(coin => ({
-            ...coin,
-            y: coin.y + gameState.speed
-          })).filter(coin => coin.y < GAME_HEIGHT + 50);
+      // Move and spawn coins
+      setCoins(prev => {
+        const updated = prev.map(coin => ({
+          ...coin,
+          position: new THREE.Vector3(coin.position.x, coin.position.y, coin.position.z + gameState.speed)
+        })).filter(coin => coin.position.z < 15);
 
-          // Add new coins
-          if (Math.random() < 0.01) {
-            const lane = Math.floor(Math.random() * 3) - 1;
-            const laneX = (lane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 20;
-            updated.push({
-              id: Date.now() + Math.random(),
-              x: laneX,
-              y: -40,
-              type: 'coin'
-            });
-          }
+        // Spawn new coins
+        if (Math.random() < 0.015) {
+          const lane = Math.floor(Math.random() * 3) - 1;
+          updated.push({
+            id: Date.now() + Math.random(),
+            position: new THREE.Vector3(lane * 2, 1, -25),
+            type: 'coin',
+            lane
+          });
+        }
 
-          return updated;
-        });
+        return updated;
+      });
 
-        // Move background elements - simplified
-        setBackgrounds(prev => prev.map(bg => ({
-          ...bg,
-          y: (bg.y + gameState.speed * 0.3) % (GAME_HEIGHT + 100)
-        })));
-
-        drawGame();
-        lastTime = currentTime;
-      }
-      
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
 
@@ -270,25 +416,23 @@ const TempleRunGame = () => {
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
-  }, [gameState.isPlaying, gameState.speed, drawGame]);
+  }, [gameState.isPlaying, gameState.speed]);
 
   // Collision detection
   useEffect(() => {
     if (!gameState.isPlaying) return;
 
-    const playerX = (gameState.playerLane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 20;
-    
     // Check obstacle collisions
     obstacles.forEach(obstacle => {
-      if (obstacle.y > gameState.playerY - 60 && 
-          obstacle.y < gameState.playerY + 60 &&
-          Math.abs(obstacle.x - playerX) < 40) {
+      if (obstacle.position.z > -2 && obstacle.position.z < 2 &&
+          obstacle.lane === gameState.playerLane &&
+          gameState.playerY < 2) {
         setGameState(prev => {
-          const newHealth = prev.health - 20;
+          const newHealth = prev.health - 25;
           if (newHealth <= 0) {
             toast({
-              title: "Game Over!",
-              description: `Final Score: ${prev.score} | Distance: ${prev.distance}m`,
+              title: "Eclipse Eclipsed!",
+              description: `Your journey ends. Score: ${prev.score}`,
               variant: "destructive"
             });
             return { ...prev, health: 0, isPlaying: false, isGameOver: true };
@@ -301,18 +445,17 @@ const TempleRunGame = () => {
 
     // Check coin collisions
     coins.forEach(coin => {
-      if (coin.y > gameState.playerY - 30 && 
-          coin.y < gameState.playerY + 60 &&
-          Math.abs(coin.x - playerX) < 35) {
+      if (coin.position.z > -2 && coin.position.z < 2 &&
+          coin.lane === gameState.playerLane) {
         setGameState(prev => ({
           ...prev,
           coins: prev.coins + 1,
-          score: prev.score + 10
+          score: prev.score + 50
         }));
         setCoins(prev => prev.filter(c => c.id !== coin.id));
       }
     });
-  }, [obstacles, coins, gameState.playerY, gameState.playerLane, gameState.isPlaying]);
+  }, [obstacles, coins, gameState.playerLane, gameState.playerY, gameState.isPlaying]);
 
   // Keyboard controls
   useEffect(() => {
@@ -341,7 +484,7 @@ const TempleRunGame = () => {
         case 'w':
         case 'W':
           e.preventDefault();
-          if (!gameState.isJumping) {
+          if (!gameState.isJumping && gameState.playerY <= 0.1) {
             setGameState(prev => ({ ...prev, isJumping: true }));
           }
           break;
@@ -350,25 +493,29 @@ const TempleRunGame = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState.isPlaying, gameState.isJumping]);
+  }, [gameState.isPlaying, gameState.isJumping, gameState.playerY]);
 
   const startGame = () => {
     setGameState(prev => ({
       ...prev,
       isPlaying: true,
       isGameOver: false,
-      isFullscreen: true
+      isFullscreen: true,
+      health: 100,
+      coins: 0,
+      score: 0,
+      distance: 0,
+      playerLane: 0,
+      speed: 2,
+      playerY: 0,
+      isJumping: false
     }));
     setObstacles([]);
     setCoins([]);
     toast({
-      title: "Eclipse Realms Started!",
-      description: "Use arrow keys to move, spacebar to jump!",
+      title: "Eclipse Realms Awakened!",
+      description: `${selectedChar.name} enters ${selectedRealm.name}`,
     });
-  };
-
-  const pauseGame = () => {
-    setGameState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
   };
 
   const exitGame = () => {
@@ -381,35 +528,37 @@ const TempleRunGame = () => {
   };
 
   const resetGame = () => {
-    setGameState({
+    setGameState(prev => ({
+      ...prev,
       health: 100,
       coins: 0,
       score: 0,
       distance: 0,
       isPlaying: false,
       isGameOver: false,
-      isFullscreen: false,
       playerLane: 0,
-      selectedCharacter: gameState.selectedCharacter,
-      speed: 3,
-      playerY: GAME_HEIGHT - 120,
+      speed: 2,
+      playerY: 0,
       isJumping: false
-    });
+    }));
     setObstacles([]);
     setCoins([]);
   };
 
-  // If in fullscreen mode, show only the game
+  // Fullscreen 3D Game View
   if (gameState.isFullscreen) {
     return (
       <div className="fixed inset-0 bg-cosmic-black z-50 flex flex-col">
-        {/* Header with exit button */}
-        <div className="bg-cosmic-black/90 border-b border-eclipse-gold/30 p-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gradient-eclipse">Eclipse Realms</h1>
+        {/* Header */}
+        <div className="bg-cosmic-black/95 border-b border-eclipse-gold/30 p-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gradient-eclipse">Eclipse Realms</h1>
+            <p className="text-sm text-cosmic-white/70">{selectedRealm.name}</p>
+          </div>
           <div className="flex gap-2">
             {gameState.isPlaying && (
               <Button 
-                onClick={pauseGame}
+                onClick={() => setGameState(prev => ({ ...prev, isPlaying: false }))}
                 variant="outline"
                 className="border-mystic-purple/40 text-mystic-purple hover:bg-mystic-purple/20"
               >
@@ -422,308 +571,213 @@ const TempleRunGame = () => {
               variant="outline"
               className="border-lava-red/40 text-lava-red hover:bg-lava-red/20"
             >
-              Exit Game
+              <X className="w-4 h-4 mr-2" />
+              Exit
             </Button>
           </div>
         </div>
 
-        {/* Game area */}
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="relative">
-            <canvas
-              ref={canvasRef}
-              width={GAME_WIDTH}
-              height={GAME_HEIGHT}
-              className="border-2 border-eclipse-gold/30 rounded-lg bg-cosmic-black"
-            />
+        {/* 3D Game Canvas */}
+        <div className="flex-1 relative">
+          <Canvas
+            shadows
+            camera={{ position: [0, 8, 10], fov: 60 }}
+            style={{ background: selectedRealm.bgColor }}
+          >
+            <Suspense fallback={null}>
+              <GameWorld3D 
+                gameState={gameState}
+                obstacles={obstacles}
+                coins={coins}
+                selectedCharacter={selectedChar}
+                selectedRealm={selectedRealm}
+              />
+            </Suspense>
+            <fog attach="fog" args={[selectedRealm.fogColor, 20, 100]} />
+          </Canvas>
 
-            {/* Game Over Overlay */}
-            {gameState.isGameOver && (
-              <div className="absolute inset-0 bg-cosmic-black/80 flex items-center justify-center rounded-lg">
-                <div className="text-center">
-                  <h3 className="text-3xl font-bold text-lava-red mb-4">Game Over!</h3>
-                  <p className="text-cosmic-white/70 mb-2 text-xl">Score: {gameState.score}</p>
-                  <p className="text-cosmic-white/70 mb-6 text-xl">Distance: {gameState.distance}m</p>
-                  <div className="flex gap-4 justify-center">
-                    <Button onClick={resetGame} className="bg-eclipse-gold hover:bg-eclipse-gold/80">
-                      Play Again
-                    </Button>
-                    <Button onClick={exitGame} variant="outline" className="border-mystic-purple/40 text-mystic-purple">
-                      Exit
-                    </Button>
-                  </div>
+          {/* Game UI Overlays */}
+          {gameState.isGameOver && (
+            <div className="absolute inset-0 bg-cosmic-black/90 flex items-center justify-center">
+              <div className="text-center bg-cosmic-black/80 p-8 rounded-xl border border-eclipse-gold/30">
+                <h3 className="text-4xl font-bold text-lava-red mb-4">Eclipse Eclipsed!</h3>
+                <p className="text-cosmic-white/70 mb-2 text-xl">Final Score: {gameState.score}</p>
+                <p className="text-cosmic-white/70 mb-6 text-xl">Distance: {gameState.distance.toFixed(1)}m</p>
+                <div className="flex gap-4 justify-center">
+                  <Button onClick={resetGame} className="bg-eclipse-gold hover:bg-eclipse-gold/80">
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Realmwalk Again
+                  </Button>
+                  <Button onClick={exitGame} variant="outline" className="border-mystic-purple/40 text-mystic-purple">
+                    Exit Nexus
+                  </Button>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Paused Overlay */}
-            {!gameState.isPlaying && !gameState.isGameOver && gameState.score > 0 && (
-              <div className="absolute inset-0 bg-cosmic-black/80 flex items-center justify-center rounded-lg">
-                <div className="text-center">
-                  <h3 className="text-3xl font-bold text-eclipse-gold mb-4">Game Paused</h3>
-                  <div className="flex gap-4 justify-center">
-                    <Button onClick={() => setGameState(prev => ({ ...prev, isPlaying: true }))} className="bg-eclipse-gold hover:bg-eclipse-gold/80">
-                      Resume
-                    </Button>
-                    <Button onClick={exitGame} variant="outline" className="border-mystic-purple/40 text-mystic-purple">
-                      Exit
-                    </Button>
-                  </div>
+          {!gameState.isPlaying && !gameState.isGameOver && (
+            <div className="absolute inset-0 bg-cosmic-black/90 flex items-center justify-center">
+              <div className="text-center bg-cosmic-black/80 p-8 rounded-xl border border-eclipse-gold/30">
+                <h3 className="text-4xl font-bold text-eclipse-gold mb-4">Ready to Enter {selectedRealm.name}?</h3>
+                <p className="text-cosmic-white/70 mb-6">{selectedRealm.description}</p>
+                <div className="flex gap-4 justify-center">
+                  <Button onClick={startGame} className="bg-eclipse-gold hover:bg-eclipse-gold/80">
+                    <Play className="w-4 h-4 mr-2" />
+                    Begin Realmwalk
+                  </Button>
+                  <Button onClick={exitGame} variant="outline" className="border-mystic-purple/40 text-mystic-purple">
+                    Return to Nexus
+                  </Button>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* Stats bar */}
-        <div className="bg-cosmic-black/90 border-t border-eclipse-gold/30 p-4 flex justify-between items-center text-cosmic-white">
-          <div className="flex gap-6 text-sm">
-            <span className="flex items-center gap-1">
-              <Heart className="w-4 h-4 text-green-400" />
-              Health: {gameState.health}%
-            </span>
-            <span className="flex items-center gap-1">
-              <Coins className="w-4 h-4 text-yellow-400" />
-              Coins: {gameState.coins}
-            </span>
-            <span className="flex items-center gap-1">
-              <Trophy className="w-4 h-4 text-eclipse-gold" />
-              Score: {gameState.score}
-            </span>
-            <span>Distance: {gameState.distance}m</span>
+        {/* Game Stats HUD */}
+        <div className="bg-cosmic-black/95 border-t border-eclipse-gold/30 p-4">
+          <div className="flex justify-between items-center">
+            <div className="flex gap-6 text-sm">
+              <span className="flex items-center gap-2">
+                <Heart className="w-4 h-4 text-green-400" />
+                <span className="text-cosmic-white">Health: {gameState.health}%</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <Coins className="w-4 h-4 text-eclipse-gold" />
+                <span className="text-cosmic-white">Coins: {gameState.coins}</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-mystic-purple" />
+                <span className="text-cosmic-white">Score: {gameState.score}</span>
+              </span>
+              <span className="text-cosmic-white">Distance: {gameState.distance.toFixed(1)}m</span>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-cosmic-white/70">
+                <span className="text-eclipse-gold">{selectedChar.emoji}</span> {selectedChar.name}
+              </div>
+              <div className="text-xs text-cosmic-white/50">
+                Arrow Keys/WASD: Move • Spacebar: Jump
+              </div>
+            </div>
           </div>
-          <div className="text-sm text-cosmic-white/70">
-            {selectedChar.emoji} {selectedChar.name}
-          </div>
-        </div>
-
-        {/* Mobile controls */}
-        <div className="md:hidden bg-cosmic-black/90 border-t border-eclipse-gold/30 p-4">
-          <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
-            <Button
-              onClick={() => setGameState(prev => ({ ...prev, playerLane: Math.max(-1, prev.playerLane - 1) }))}
-              variant="outline"
-              className="border-mystic-purple/40 text-mystic-purple h-12"
-              disabled={!gameState.isPlaying}
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </Button>
-            <Button
-              onClick={() => !gameState.isJumping && setGameState(prev => ({ ...prev, isJumping: true }))}
-              variant="outline"
-              className="border-eclipse-gold/40 text-eclipse-gold h-12"
-              disabled={!gameState.isPlaying}
-            >
-              <ArrowUp className="w-6 h-6" />
-            </Button>
-            <Button
-              onClick={() => setGameState(prev => ({ ...prev, playerLane: Math.min(1, prev.playerLane + 1) }))}
-              variant="outline"
-              className="border-mystic-purple/40 text-mystic-purple h-12"
-              disabled={!gameState.isPlaying}
-            >
-              <ArrowRight className="w-6 h-6" />
-            </Button>
-          </div>
-          <p className="text-center text-sm text-cosmic-white/60 mt-2">
-            Move left/right • Jump • Avoid obstacles • Collect coins
-          </p>
         </div>
       </div>
     );
   }
 
+  // Main Menu
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 relative">
-      {/* Background elements */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-eclipse-gold/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-mystic-purple/15 rounded-full blur-3xl"></div>
-      </div>
-      
-      <div className="max-w-7xl mx-auto relative z-10" id="game">
-        {/* Section header */}
-        <div className="text-center mb-16">
-          <Badge className="mb-4 bg-eclipse-gold/20 text-eclipse-gold border-eclipse-gold/30">
-            <Gamepad2 className="w-3 h-3 mr-1" />
-            Eclipse Realms - Adventure Awaits
+    <section className="py-20 bg-gradient-to-b from-cosmic-black to-mystic-purple/20">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-12">
+          <Badge className="bg-eclipse-gold/20 text-eclipse-gold mb-4">
+            <Gamepad2 className="w-4 h-4 mr-2" />
+            Eclipse Realms Experience
           </Badge>
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="text-gradient-eclipse">Eclipse</span>{" "}
-            <span className="text-gradient-rift">Realms</span>
+          <h2 className="text-4xl font-bold text-gradient-eclipse mb-4">
+            Enter the Multiverse
           </h2>
-          <p className="text-xl text-cosmic-white/70 max-w-3xl mx-auto">
-            Run through mystical Eclipse Realms, avoid cosmic obstacles, collect star coins, and master unique character abilities!
+          <p className="text-cosmic-white/70 text-lg max-w-2xl mx-auto">
+            Choose your Realmwalker and traverse the broken dimensions in this immersive 3D adventure
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {/* Character Selection */}
-          <div className="lg:col-span-1">
-            <Card className="bg-gradient-card border-mystic-purple/20 mb-4">
-              <CardHeader>
-                <CardTitle className="text-cosmic-white text-sm">Select Character</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {characters.map((character) => (
-                  <button
-                    key={character.id}
-                    onClick={() => setGameState(prev => ({ ...prev, selectedCharacter: character.id }))}
-                    className={`w-full p-3 rounded-lg border text-left transition-all ${
-                      gameState.selectedCharacter === character.id
-                        ? 'border-eclipse-gold bg-eclipse-gold/10'
-                        : 'border-mystic-purple/20 hover:border-mystic-purple/40'
+          <Card className="bg-cosmic-black/60 border-eclipse-gold/30">
+            <CardHeader>
+              <CardTitle className="text-eclipse-gold flex items-center gap-2">
+                <Zap className="w-5 h-5" />
+                Choose Your Realmwalker
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                {characters.map((char) => (
+                  <div
+                    key={char.model}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      gameState.selectedCharacter === char.model
+                        ? 'border-eclipse-gold bg-eclipse-gold/20'
+                        : 'border-cosmic-white/20 hover:border-eclipse-gold/50'
                     }`}
-                    disabled={gameState.isPlaying}
+                    onClick={() => setGameState(prev => ({ ...prev, selectedCharacter: char.model }))}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{character.emoji}</span>
-                      <div>
-                        <div className="text-cosmic-white font-semibold text-sm">{character.name}</div>
-                        <div className="text-cosmic-white/60 text-xs">{character.ability}</div>
+                    <div className="text-center">
+                      <div className="text-3xl mb-2">{char.emoji}</div>
+                      <h3 className="text-cosmic-white font-bold mb-1">{char.name}</h3>
+                      <div className="text-xs text-cosmic-white/60 space-y-1">
+                        {char.abilities.map((ability, i) => (
+                          <div key={i} className="flex items-center gap-1">
+                            <div className="w-1 h-1 bg-eclipse-gold rounded-full"></div>
+                            {ability}
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Game Stats */}
-            <Card className="bg-gradient-card border-mystic-purple/20">
-              <CardHeader>
-                <CardTitle className="text-cosmic-white text-sm">Game Stats</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-cosmic-white/70 flex items-center gap-1">
-                      <Heart className="w-3 h-3 text-green-400" />
-                      Health
-                    </span>
-                    <span className="text-sm text-cosmic-white">{gameState.health}/100</span>
-                  </div>
-                  <div className="w-full bg-cosmic-black/50 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${gameState.health}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-mystic-purple/20 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-cosmic-white/70 flex items-center gap-1">
-                      <Coins className="w-3 h-3 text-yellow-400" />
-                      Coins
-                    </span>
-                    <span className="text-yellow-400 font-bold">{gameState.coins}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-cosmic-white/70 flex items-center gap-1">
-                      <Trophy className="w-3 h-3 text-eclipse-gold" />
-                      Score
-                    </span>
-                    <span className="text-eclipse-gold font-bold">{gameState.score}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-cosmic-white/70">Distance</span>
-                    <span className="text-rift-cyan font-bold">{gameState.distance}m</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Game Canvas */}
-          <div className="lg:col-span-3">
-            <Card className="bg-gradient-card border-mystic-purple/20">
-              <CardHeader>
-                <CardTitle className="text-cosmic-white flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-eclipse-gold" />
-                  Temple Run - Eclipse Adventure
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="relative">
-                  <canvas
-                    ref={canvasRef}
-                    width={GAME_WIDTH}
-                    height={GAME_HEIGHT}
-                    className="border-2 border-eclipse-gold/30 rounded-lg bg-cosmic-black mx-auto block"
-                  />
-
-                  {/* Start Game Overlay */}
-                  {!gameState.isPlaying && !gameState.isGameOver && gameState.score === 0 && (
-                    <div className="absolute inset-0 bg-cosmic-black/80 flex items-center justify-center rounded-lg">
-                      <div className="text-center">
-                        <h3 className="text-2xl font-bold text-eclipse-gold mb-2">Ready for Eclipse Realms?</h3>
-                        <p className="text-cosmic-white/70 mb-4">Choose your character and start your cosmic adventure!</p>
+          {/* Realm Selection */}
+          <Card className="bg-cosmic-black/60 border-eclipse-gold/30">
+            <CardHeader>
+              <CardTitle className="text-eclipse-gold flex items-center gap-2">
+                <Trophy className="w-5 h-5" />
+                Select Your Realm
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {realms.map((realm, index) => (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      gameState.selectedRealm === index
+                        ? 'border-eclipse-gold bg-eclipse-gold/20'
+                        : 'border-cosmic-white/20 hover:border-eclipse-gold/50'
+                    }`}
+                    onClick={() => setGameState(prev => ({ ...prev, selectedRealm: index }))}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-8 h-8 rounded-full border-2"
+                        style={{ backgroundColor: realm.bgColor, borderColor: realm.fogColor }}
+                      ></div>
+                      <div>
+                        <h3 className="text-cosmic-white font-bold">{realm.name}</h3>
+                        <p className="text-cosmic-white/60 text-sm">{realm.description}</p>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-                {/* Mobile controls */}
-                <div className="grid grid-cols-3 gap-2 mt-4 md:hidden">
-                  <Button
-                    onClick={() => setGameState(prev => ({ ...prev, playerLane: Math.max(-1, prev.playerLane - 1) }))}
-                    variant="outline"
-                    className="border-mystic-purple/40 text-mystic-purple"
-                    disabled={!gameState.isPlaying}
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={() => !gameState.isJumping && setGameState(prev => ({ ...prev, isJumping: true }))}
-                    variant="outline"
-                    className="border-eclipse-gold/40 text-eclipse-gold"
-                    disabled={!gameState.isPlaying}
-                  >
-                    <ArrowUp className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={() => setGameState(prev => ({ ...prev, playerLane: Math.min(1, prev.playerLane + 1) }))}
-                    variant="outline"
-                    className="border-mystic-purple/40 text-mystic-purple"
-                    disabled={!gameState.isPlaying}
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                {/* Game Controls */}
-                <div className="flex gap-2 mt-4 justify-center">
-                  <Button 
-                    onClick={startGame}
-                    className="bg-gradient-to-r from-eclipse-gold to-rift-cyan hover:from-eclipse-gold/80 hover:to-rift-cyan/80 text-cosmic-white border-0"
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Eclipse Realms Game Play Now
-                  </Button>
-                  
-                  <Button 
-                    onClick={resetGame}
-                    variant="outline"
-                    className="border-lava-red/40 text-lava-red hover:bg-lava-red/20"
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Reset
-                  </Button>
-                </div>
-
-                {/* Controls Guide */}
-                <div className="mt-4 text-center text-sm text-cosmic-white/60 space-y-1">
-                  <p>Desktop: Arrow Keys / A,D: Move • Spacebar / W: Jump</p>
-                  <p>Mobile: Use the control buttons above</p>
-                  <p>Collect star coins • Avoid cosmic obstacles • Master the Eclipse Realms!</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Start Game Button */}
+        <div className="text-center mt-12">
+          <Button 
+            onClick={startGame}
+            size="lg"
+            className="bg-gradient-to-r from-eclipse-gold to-lava-red hover:from-eclipse-gold/80 hover:to-lava-red/80 text-cosmic-black font-bold px-12 py-6 text-xl"
+          >
+            <Play className="w-6 h-6 mr-3" />
+            Eclipse Realms Game Play Now
+          </Button>
+          <p className="text-cosmic-white/50 text-sm mt-4">
+            Experience true 3D multiverse exploration • By Santosh Khadka
+          </p>
         </div>
       </div>
     </section>
   );
 };
 
-export default TempleRunGame;
+export default EclipseRealmsGame;
