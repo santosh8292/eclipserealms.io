@@ -40,14 +40,14 @@ interface GameObject {
 }
 
 const characters = [
-  { id: "shadowmancer", name: "Shadowmancer", color: "#8B5CF6", ability: "Shadow Dash", emoji: "🌙" },
-  { id: "riftblade", name: "Riftblade", color: "#06B6D4", ability: "Time Slice", emoji: "⚔️" },
-  { id: "techshaman", name: "Tech Shaman", color: "#F59E0B", ability: "Digital Shield", emoji: "🔮" },
-  { id: "chronoarcher", name: "Chrono Archer", color: "#EF4444", ability: "Time Slow", emoji: "🏹" }
+  { id: "pikachu", name: "Pikachu", color: "#FFD700", ability: "Thunder Bolt", emoji: "⚡" },
+  { id: "doraemon", name: "Doraemon", color: "#0066CC", ability: "Magic Pocket", emoji: "🤖" },
+  { id: "tom", name: "Tom", color: "#A0A0A0", ability: "Cat Speed", emoji: "🐱" },
+  { id: "jerry", name: "Jerry", color: "#8B4513", ability: "Mouse Agility", emoji: "🐭" }
 ];
 
-const GAME_WIDTH = 600;
-const GAME_HEIGHT = 400;
+const GAME_WIDTH = 800;
+const GAME_HEIGHT = 600;
 const LANE_WIDTH = GAME_WIDTH / 3;
 
 const TempleRunGame = () => {
@@ -60,9 +60,9 @@ const TempleRunGame = () => {
     isGameOver: false,
     isFullscreen: false,
     playerLane: 0, // Center lane
-    selectedCharacter: "shadowmancer",
+    selectedCharacter: "pikachu",
     speed: 3,
-    playerY: GAME_HEIGHT - 80,
+      playerY: GAME_HEIGHT - 120,
     isJumping: false
   });
 
@@ -172,87 +172,95 @@ const TempleRunGame = () => {
 
   }, [gameState, obstacles, coins, backgrounds, selectedChar]);
 
-  // Game loop
+  // Game loop - optimized for better performance
   useEffect(() => {
     if (!gameState.isPlaying) return;
 
-    const gameLoop = () => {
-      // Update game state
-      setGameState(prev => {
-        const newState = { ...prev };
-        
-        // Handle jumping
-        if (newState.isJumping) {
-          if (newState.playerY > GAME_HEIGHT - 160) {
-            newState.playerY -= 8;
+    let lastTime = 0;
+    const targetFPS = 60;
+    const frameInterval = 1000 / targetFPS;
+
+    const gameLoop = (currentTime: number) => {
+      if (currentTime - lastTime >= frameInterval) {
+        // Update game state
+        setGameState(prev => {
+          const newState = { ...prev };
+          
+          // Handle jumping
+          if (newState.isJumping) {
+            if (newState.playerY > GAME_HEIGHT - 200) {
+              newState.playerY -= 12;
+            } else {
+              newState.isJumping = false;
+            }
+          } else if (newState.playerY < GAME_HEIGHT - 120) {
+            newState.playerY += 12;
           } else {
-            newState.isJumping = false;
+            newState.playerY = GAME_HEIGHT - 120;
           }
-        } else if (newState.playerY < GAME_HEIGHT - 80) {
-          newState.playerY += 8;
-        } else {
-          newState.playerY = GAME_HEIGHT - 80;
-        }
 
-        // Update distance and score
-        newState.distance += 1;
-        newState.score += 1;
-        newState.speed = Math.min(8, 3 + newState.distance / 100);
+          // Update distance and score
+          newState.distance += 1;
+          newState.score += 1;
+          newState.speed = Math.min(10, 4 + newState.distance / 150);
 
-        return newState;
-      });
+          return newState;
+        });
 
-      // Move obstacles
-      setObstacles(prev => {
-        const updated = prev.map(obs => ({
-          ...obs,
-          y: obs.y + gameState.speed
-        })).filter(obs => obs.y < GAME_HEIGHT + 100);
+        // Move obstacles - reduced frequency for better performance
+        setObstacles(prev => {
+          const updated = prev.map(obs => ({
+            ...obs,
+            y: obs.y + gameState.speed
+          })).filter(obs => obs.y < GAME_HEIGHT + 100);
 
-        // Add new obstacles
-        if (Math.random() < 0.02) {
-          const lane = Math.floor(Math.random() * 3) - 1;
-          const laneX = (lane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 20;
-          updated.push({
-            id: Date.now(),
-            x: laneX,
-            y: -60,
-            type: 'obstacle'
-          });
-        }
+          // Add new obstacles less frequently
+          if (Math.random() < 0.015) {
+            const lane = Math.floor(Math.random() * 3) - 1;
+            const laneX = (lane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 30;
+            updated.push({
+              id: Date.now() + Math.random(),
+              x: laneX,
+              y: -80,
+              type: 'obstacle'
+            });
+          }
 
-        return updated;
-      });
+          return updated;
+        });
 
-      // Move coins
-      setCoins(prev => {
-        const updated = prev.map(coin => ({
-          ...coin,
-          y: coin.y + gameState.speed
-        })).filter(coin => coin.y < GAME_HEIGHT + 50);
+        // Move coins
+        setCoins(prev => {
+          const updated = prev.map(coin => ({
+            ...coin,
+            y: coin.y + gameState.speed
+          })).filter(coin => coin.y < GAME_HEIGHT + 50);
 
-        // Add new coins
-        if (Math.random() < 0.015) {
-          const lane = Math.floor(Math.random() * 3) - 1;
-          const laneX = (lane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 15;
-          updated.push({
-            id: Date.now(),
-            x: laneX,
-            y: -30,
-            type: 'coin'
-          });
-        }
+          // Add new coins
+          if (Math.random() < 0.01) {
+            const lane = Math.floor(Math.random() * 3) - 1;
+            const laneX = (lane + 1) * LANE_WIDTH + LANE_WIDTH/2 - 20;
+            updated.push({
+              id: Date.now() + Math.random(),
+              x: laneX,
+              y: -40,
+              type: 'coin'
+            });
+          }
 
-        return updated;
-      });
+          return updated;
+        });
 
-      // Move background elements
-      setBackgrounds(prev => prev.map(bg => ({
-        ...bg,
-        y: bg.y + gameState.speed * 0.5
-      })).filter(bg => bg.y < GAME_HEIGHT + 50));
+        // Move background elements - simplified
+        setBackgrounds(prev => prev.map(bg => ({
+          ...bg,
+          y: (bg.y + gameState.speed * 0.3) % (GAME_HEIGHT + 100)
+        })));
 
-      drawGame();
+        drawGame();
+        lastTime = currentTime;
+      }
+      
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
 
@@ -384,7 +392,7 @@ const TempleRunGame = () => {
       playerLane: 0,
       selectedCharacter: gameState.selectedCharacter,
       speed: 3,
-      playerY: GAME_HEIGHT - 80,
+      playerY: GAME_HEIGHT - 120,
       isJumping: false
     });
     setObstacles([]);
@@ -424,8 +432,8 @@ const TempleRunGame = () => {
           <div className="relative">
             <canvas
               ref={canvasRef}
-              width={800}
-              height={600}
+              width={GAME_WIDTH}
+              height={GAME_HEIGHT}
               className="border-2 border-eclipse-gold/30 rounded-lg bg-cosmic-black"
             />
 
@@ -690,7 +698,7 @@ const TempleRunGame = () => {
                     className="bg-gradient-to-r from-eclipse-gold to-rift-cyan hover:from-eclipse-gold/80 hover:to-rift-cyan/80 text-cosmic-white border-0"
                   >
                     <Play className="w-4 h-4 mr-2" />
-                    Play Eclipse Realms
+                    Eclipse Realms Game Play Now
                   </Button>
                   
                   <Button 
