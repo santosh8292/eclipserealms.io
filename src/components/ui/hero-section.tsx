@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Play, Download, Users, Star } from "lucide-react";
 import heroImage from "@/assets/hero-eclipse-realms.jpg";
 
@@ -36,9 +37,16 @@ const HeroSection = () => {
           Where dimensions collide, legends are born
         </p>
         
+        {/* Game disclaimer */}
+        <div className="mb-6">
+          <Badge variant="outline" className="text-sm border-eclipse-gold text-eclipse-gold">
+            🎮 GAME DEMO - Not Real Game
+          </Badge>
+        </div>
+
         {/* Game description */}
         <p className="text-lg text-cosmic-white/80 mb-12 max-w-3xl mx-auto leading-relaxed">
-          Run through mystical Eclipse Realms in this epic 3D endless runner! 
+          Run through mystical Eclipse Realms in this epic 3D endless runner demo! 
           Choose unique characters, avoid obstacles, collect cosmic coins, 
           and see how far you can go. <span className="text-eclipse-gold font-semibold">Play for free!</span>
         </p>
@@ -78,6 +86,29 @@ const HeroSection = () => {
               <span className="text-3xl font-bold text-eclipse-gold">4.9</span>
             </div>
             <div className="text-cosmic-white/70">User Rating</div>
+          </div>
+        </div>
+
+        {/* Founder Links */}
+        <div className="mt-12 pt-8 border-t border-eclipse-gold/20">
+          <p className="text-sm text-cosmic-white/60 mb-4">Created by Santosh Khadka</p>
+          <div className="flex justify-center gap-6">
+            <a 
+              href="https://www.linkedin.com/in/santosh-khadka-11068126b" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-eclipse-gold hover:text-eclipse-gold/80 transition-colors"
+            >
+              LinkedIn Profile
+            </a>
+            <a 
+              href="https://github.com/santosh892" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-eclipse-gold hover:text-eclipse-gold/80 transition-colors"
+            >
+              GitHub Profile
+            </a>
           </div>
         </div>
 

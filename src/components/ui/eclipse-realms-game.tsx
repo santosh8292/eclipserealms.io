@@ -300,53 +300,74 @@ function GameWorld3D({ gameState, obstacles, coins, selectedCharacter, selectedR
   );
 }
 
-// Subscription Modal Component
-function SubscriptionModal({ isOpen, onClose, onSubscribe }: { isOpen: boolean; onClose: () => void; onSubscribe: () => void }) {
+// Payment Modal Component
+function PaymentModal({ isOpen, onClose, onPurchase }: { isOpen: boolean; onClose: () => void; onPurchase: (tier: string) => void }) {
   if (!isOpen) return null;
+
+  const tiers = [
+    {
+      name: "Cosmetics Pack",
+      price: "$2.99",
+      description: "Unlock special skins and effects",
+      features: ["Character skins", "Special effects", "Victory animations"],
+      tier: "cosmetics"
+    },
+    {
+      name: "Battle Pass",
+      price: "$9.99", 
+      description: "Seasonal content and premium characters",
+      features: ["All 4 characters", "Seasonal rewards", "Weekly challenges"],
+      tier: "battlepass"
+    },
+    {
+      name: "Full Game",
+      price: "$49.99",
+      description: "Complete Eclipse Realms experience",
+      features: ["Unlimited access", "All future content", "No ads", "Premium support"],
+      tier: "fullgame"
+    }
+  ];
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md bg-cosmic-void border-eclipse-gold">
+      <Card className="w-full max-w-4xl bg-cosmic-void border-eclipse-gold max-h-[90vh] overflow-y-auto">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl text-eclipse-gold flex items-center justify-center gap-2">
             <Crown className="h-6 w-6" />
-            Unlock Premium Eclipse Realms
+            Eclipse Realms - Premium Tiers
           </CardTitle>
+          <p className="text-cosmic-white/80">Choose your adventure level</p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-center space-y-2">
-            <p className="text-cosmic-white/80">
-              Unlock all 4 unique Realmwalkers and access unlimited gameplay!
-            </p>
-            <div className="text-3xl font-bold text-eclipse-gold">$9.99</div>
-            <p className="text-sm text-cosmic-white/60">One-time purchase</p>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {tiers.map((tier) => (
+              <Card key={tier.tier} className="border-cosmic-gray hover:border-eclipse-gold transition-colors">
+                <CardContent className="p-6 text-center">
+                  <h3 className="text-xl font-bold text-cosmic-white mb-2">{tier.name}</h3>
+                  <div className="text-3xl font-bold text-eclipse-gold mb-2">{tier.price}</div>
+                  <p className="text-cosmic-white/70 mb-4">{tier.description}</p>
+                  <div className="space-y-2 mb-6">
+                    {tier.features.map((feature, index) => (
+                      <div key={index} className="flex items-center gap-2 text-cosmic-white/80">
+                        <div className="w-2 h-2 bg-eclipse-gold rounded-full"></div>
+                        <span className="text-sm">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button 
+                    onClick={() => onPurchase(tier.tier)} 
+                    className="w-full bg-eclipse-gold text-cosmic-void hover:bg-eclipse-gold/90"
+                  >
+                    Purchase
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
           
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-cosmic-white/80">
-              <div className="w-2 h-2 bg-eclipse-gold rounded-full"></div>
-              <span>All 4 characters unlocked</span>
-            </div>
-            <div className="flex items-center gap-2 text-cosmic-white/80">
-              <div className="w-2 h-2 bg-eclipse-gold rounded-full"></div>
-              <span>Unlimited gameplay</span>
-            </div>
-            <div className="flex items-center gap-2 text-cosmic-white/80">
-              <div className="w-2 h-2 bg-eclipse-gold rounded-full"></div>
-              <span>Access to all realms</span>
-            </div>
-            <div className="flex items-center gap-2 text-cosmic-white/80">
-              <div className="w-2 h-2 bg-eclipse-gold rounded-full"></div>
-              <span>No ads or interruptions</span>
-            </div>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} className="flex-1">
-              Cancel
-            </Button>
-            <Button onClick={onSubscribe} className="flex-1 bg-eclipse-gold text-cosmic-void">
-              Get Premium
+          <div className="flex justify-center">
+            <Button variant="outline" onClick={onClose} className="px-8">
+              Close
             </Button>
           </div>
         </CardContent>
@@ -356,16 +377,14 @@ function SubscriptionModal({ isOpen, onClose, onSubscribe }: { isOpen: boolean; 
 }
 
 // Character Selection Component
-function CharacterSelection({ characters, selectedCharacter, onSelect, isPremium }: {
+function CharacterSelection({ characters, selectedCharacter, onSelect }: {
   characters: Character[];
   selectedCharacter: string;
   onSelect: (character: string) => void;
-  isPremium: boolean;
 }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      {characters.map((char, index) => {
-        const isLocked = !isPremium && index > 0;
+      {characters.map((char) => {
         const isSelected = char.model === selectedCharacter;
         
         return (
@@ -375,15 +394,10 @@ function CharacterSelection({ characters, selectedCharacter, onSelect, isPremium
               isSelected 
                 ? 'border-eclipse-gold bg-eclipse-gold/10' 
                 : 'border-cosmic-gray hover:border-eclipse-gold/50'
-            } ${isLocked ? 'opacity-50' : ''}`}
-            onClick={() => !isLocked && onSelect(char.model)}
+            }`}
+            onClick={() => onSelect(char.model)}
           >
             <CardContent className="p-4 text-center">
-              {isLocked && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
-                  <Lock className="h-8 w-8 text-cosmic-white/60" />
-                </div>
-              )}
               <div className="w-16 h-16 mx-auto mb-2 bg-cover bg-center rounded-lg border-2 border-cosmic-gray" 
                    style={{ backgroundImage: `url(${char.image})` }}>
               </div>
@@ -396,6 +410,43 @@ function CharacterSelection({ characters, selectedCharacter, onSelect, isPremium
           </Card>
         );
       })}
+    </div>
+  );
+}
+
+// Difficulty Selection Component
+function DifficultySelection({ selectedDifficulty, onSelect }: {
+  selectedDifficulty: string;
+  onSelect: (difficulty: string) => void;
+}) {
+  const difficulties = [
+    { name: "Slow", value: "slow", speed: 1.0, description: "Perfect for beginners" },
+    { name: "Medium", value: "medium", speed: 1.5, description: "Balanced challenge" },
+    { name: "Hard", value: "hard", speed: 2.5, description: "For experienced players" }
+  ];
+
+  return (
+    <div className="mb-6">
+      <h3 className="text-xl font-bold text-cosmic-white mb-4 text-center">Choose Difficulty</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {difficulties.map((diff) => (
+          <Card 
+            key={diff.value}
+            className={`cursor-pointer transition-all duration-300 ${
+              selectedDifficulty === diff.value 
+                ? 'border-eclipse-gold bg-eclipse-gold/10' 
+                : 'border-cosmic-gray hover:border-eclipse-gold/50'
+            }`}
+            onClick={() => onSelect(diff.value)}
+          >
+            <CardContent className="p-4 text-center">
+              <h4 className="font-semibold text-cosmic-white mb-2">{diff.name}</h4>
+              <p className="text-sm text-cosmic-white/60 mb-2">{diff.description}</p>
+              <div className="text-eclipse-gold font-bold">Speed: {diff.speed}x</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
@@ -413,15 +464,17 @@ const EclipseRealmsGame = () => {
     playerLane: 0,
     selectedCharacter: "deer",
     selectedRealm: 0,
-    speed: 1.5, // Slower initial speed
+    speed: 1.0, // Slower initial speed for easy mode
     playerY: 0,
     isJumping: false,
-    isPremium: false
+    isPremium: true // All characters unlocked
   });
 
   const [obstacles, setObstacles] = useState<GameObject3D[]>([]);
   const [coins, setCoins] = useState<GameObject3D[]>([]);
-  const [showSubscription, setShowSubscription] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [selectedDifficulty, setSelectedDifficulty] = useState("slow");
+  const [showCharacterSelect, setShowCharacterSelect] = useState(true);
   const gameLoopRef = useRef<number>();
 
   const selectedChar = characters.find(c => c.model === gameState.selectedCharacter) || characters[0];
@@ -591,26 +644,9 @@ const EclipseRealmsGame = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState.isPlaying, gameState.isJumping, gameState.playerY]);
 
-  const startGame = () => {
-    setGameState(prev => ({
-      ...prev,
-      health: 100,
-      coins: 0,
-      score: 0,
-      distance: 0,
-      isPlaying: true,
-      isGameOver: false,
-      playerLane: 0,
-      speed: 1.5,
-      playerY: 0,
-      isJumping: false
-    }));
-    setObstacles([]);
-    setCoins([]);
-    toast({
-      title: "Eclipse Realms Started!",
-      description: `Playing as ${selectedChar.name}`,
-    });
+  const backToSelection = () => {
+    setShowCharacterSelect(true);
+    setGameState(prev => ({ ...prev, isPlaying: false, isGameOver: false }));
   };
 
   const stopGame = () => {
@@ -636,20 +672,48 @@ const EclipseRealmsGame = () => {
   };
 
   const handleCharacterSelect = (characterModel: string) => {
-    if (!gameState.isPremium && characters.findIndex(c => c.model === characterModel) > 0) {
-      setShowSubscription(true);
-      return;
-    }
     setGameState(prev => ({ ...prev, selectedCharacter: characterModel }));
   };
 
-  const handleSubscribe = () => {
-    // Simulate subscription purchase
-    setGameState(prev => ({ ...prev, isPremium: true }));
-    setShowSubscription(false);
+  const handlePurchase = (tier: string) => {
+    // Simulate purchase
     toast({
-      title: "Premium Unlocked!",
-      description: "All characters and features are now available!",
+      title: `${tier} Purchased!`,
+      description: "Thank you for your purchase!",
+    });
+    setShowPayment(false);
+  };
+
+  const getDifficultySpeed = (difficulty: string) => {
+    switch (difficulty) {
+      case "slow": return 1.0;
+      case "medium": return 1.5;
+      case "hard": return 2.5;
+      default: return 1.0;
+    }
+  };
+
+  const handleStartGame = () => {
+    const speed = getDifficultySpeed(selectedDifficulty);
+    setGameState(prev => ({
+      ...prev,
+      health: 100,
+      coins: 0,
+      score: 0,
+      distance: 0,
+      isPlaying: true,
+      isGameOver: false,
+      playerLane: 0,
+      speed: speed,
+      playerY: 0,
+      isJumping: false
+    }));
+    setObstacles([]);
+    setCoins([]);
+    setShowCharacterSelect(false);
+    toast({
+      title: "Eclipse Realms Started!",
+      description: `Playing as ${selectedChar.name} on ${selectedDifficulty} mode`,
     });
   };
 
@@ -686,26 +750,67 @@ const EclipseRealmsGame = () => {
           <h2 className="text-4xl md:text-6xl font-bold mb-4">
             <span className="text-gradient-eclipse">Eclipse Realms</span>
           </h2>
+          <div className="mb-4">
+            <Badge variant="outline" className="text-sm border-eclipse-gold text-eclipse-gold">
+              🎮 GAME DEMO - Not Real Game
+            </Badge>
+          </div>
           <p className="text-xl text-cosmic-white/80 mb-8">
             Choose your Realmwalker and embark on an epic 3D journey!
           </p>
         </div>
 
-        {/* Character Selection */}
-        <div className="mb-8">
-          <h3 className="text-2xl font-bold text-center mb-6 text-eclipse-gold">
-            Choose Your Realmwalker
-          </h3>
-          <CharacterSelection 
-            characters={characters}
-            selectedCharacter={gameState.selectedCharacter}
-            onSelect={handleCharacterSelect}
-            isPremium={gameState.isPremium}
-          />
-        </div>
+        {showCharacterSelect ? (
+          <div className="max-w-4xl mx-auto">
+            <Card className="bg-cosmic-void/50 border-eclipse-gold backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-center text-2xl text-eclipse-gold">
+                  Setup Your Adventure
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                {/* Character Selection */}
+                <div>
+                  <h3 className="text-xl font-bold text-center mb-6 text-eclipse-gold">
+                    Choose Your Realmwalker (All Unlocked!)
+                  </h3>
+                  <CharacterSelection 
+                    characters={characters}
+                    selectedCharacter={gameState.selectedCharacter}
+                    onSelect={handleCharacterSelect}
+                  />
+                </div>
 
-        {/* Game Container */}
-        <div className="max-w-6xl mx-auto">
+                {/* Difficulty Selection */}
+                <DifficultySelection 
+                  selectedDifficulty={selectedDifficulty}
+                  onSelect={setSelectedDifficulty}
+                />
+
+                <div className="flex flex-col gap-4 items-center">
+                  <Button 
+                    onClick={handleStartGame} 
+                    size="lg"
+                    className="bg-eclipse-gold text-cosmic-void hover:bg-eclipse-gold/90 px-8 py-4 text-lg"
+                  >
+                    <Play className="w-5 h-5 mr-2" />
+                    Play Game
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => setShowPayment(true)} 
+                    variant="outline"
+                    className="border-eclipse-gold text-eclipse-gold hover:bg-eclipse-gold/10"
+                  >
+                    <Crown className="w-4 h-4 mr-2" />
+                    View Premium Tiers
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="max-w-6xl mx-auto">
           <Card className="bg-cosmic-void/50 border-eclipse-gold backdrop-blur-sm">
             <CardHeader>
               <div className="flex justify-between items-center flex-wrap gap-4">
@@ -724,14 +829,7 @@ const EclipseRealmsGame = () => {
                   </Badge>
                 </div>
                 
-                <div className="flex gap-2">
-                  {!gameState.isPlaying && !gameState.isGameOver && (
-                    <Button onClick={startGame} className="bg-eclipse-gold text-cosmic-void">
-                      <Play className="w-4 h-4 mr-2" />
-                      Start Eclipse Run
-                    </Button>
-                  )}
-                  
+                <div className="flex gap-2 flex-wrap">
                   {gameState.isPlaying && (
                     <Button onClick={stopGame} variant="outline">
                       <Pause className="w-4 h-4 mr-2" />
@@ -739,12 +837,15 @@ const EclipseRealmsGame = () => {
                     </Button>
                   )}
                   
-                  {(gameState.isGameOver || !gameState.isPlaying) && (
-                    <Button onClick={resetGame} variant="outline">
-                      <RotateCcw className="w-4 h-4 mr-2" />
-                      Reset
-                    </Button>
-                  )}
+                  <Button onClick={resetGame} variant="outline">
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Reset
+                  </Button>
+
+                  <Button onClick={backToSelection} variant="outline">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Setup
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -823,13 +924,14 @@ const EclipseRealmsGame = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
+          </div>
+        )}
 
-        {/* Subscription Modal */}
-        <SubscriptionModal
-          isOpen={showSubscription}
-          onClose={() => setShowSubscription(false)}
-          onSubscribe={handleSubscribe}
+        {/* Payment Modal */}
+        <PaymentModal
+          isOpen={showPayment}
+          onClose={() => setShowPayment(false)}
+          onPurchase={handlePurchase}
         />
       </div>
     </section>
