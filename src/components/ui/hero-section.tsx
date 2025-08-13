@@ -23,7 +23,7 @@ const HeroSection = () => {
       <div className="relative z-10 text-center max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Game title */}
         <div className="mb-8 float-animation">
-          <h1 className="text-6xl md:text-8xl font-bold mb-4">
+          <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-4">
             <span className="text-gradient-eclipse">ECLIPSE</span>
             <br />
             <span className="text-gradient-rift">REALMS</span>
@@ -53,7 +53,7 @@ const HeroSection = () => {
           >
             <a href="#game">
               <Play className="mr-2 h-5 w-5" />
-              Play Temple Run Now
+              Play Eclipse Realms Now
             </a>
           </Button>
           <Button variant="cosmic" size="lg" className="text-lg px-8 py-6">

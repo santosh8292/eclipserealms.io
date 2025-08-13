@@ -73,9 +73,12 @@
     --glow-rift: 0 0 30px hsl(var(--rift-blue) / 0.4);
     --glow-mystic: 0 0 25px hsl(var(--mystic-magenta) / 0.3);
     
-    /* Animations */
+/* Animations */
     --transition-cosmic: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-glow: all 0.3s ease-in-out;
+    
+    /* Mobile optimizations */
+    --mobile-safe-area: env(safe-area-inset-top, 0px);
 
     --radius: 0.75rem;
 
