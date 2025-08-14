@@ -328,8 +328,8 @@ function Character3D({ character, position, isPlayer = false }: { character: Cha
   );
 }
 
-// 3D Obstacle Component (slower)
-function Obstacle3D({ position, type }: { position: THREE.Vector3, type: string }) {
+// 3D Obstacle Component (character-specific colors)
+function Obstacle3D({ position, type, characterModel }: { position: THREE.Vector3, type: string, characterModel: string }) {
   const meshRef = useRef<THREE.Mesh>(null);
   
   useFrame((state) => {
@@ -338,11 +338,20 @@ function Obstacle3D({ position, type }: { position: THREE.Vector3, type: string 
     }
   });
 
-  const color = type === 'enemy' ? '#FF0000' : '#8B0000';
+  // Character-specific obstacle colors
+  const getObstacleColor = () => {
+    switch (characterModel) {
+      case 'deer': return '#FF0000'; // Red for deer
+      case 'bull': return '#FFC0CB'; // Pink for bull
+      case 'doraemon': return '#000000'; // Black for doraemon
+      case 'pikachu': return '#FFFF00'; // Yellow for pikachu
+      default: return '#8B0000';
+    }
+  };
   
   return (
     <Box ref={meshRef} args={[1, 2, 1]} position={position}>
-      <meshStandardMaterial color={color} metalness={0.8} roughness={0.2} />
+      <meshStandardMaterial color={getObstacleColor()} metalness={0.8} roughness={0.2} />
     </Box>
   );
 }
@@ -388,23 +397,23 @@ function GameWorld3D({ gameState, obstacles, coins, selectedCharacter, selectedR
 
   return (
     <>
+      {/* White Background */}
+      <color attach="background" args={['#FFFFFF']} />
+      
       {/* Lighting */}
-      <ambientLight intensity={0.4} color={selectedRealm.ambientColor} />
+      <ambientLight intensity={0.6} color="#FFFFFF" />
       <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
-      <pointLight position={[0, 10, 0]} intensity={0.5} color={selectedRealm.bgColor} />
+      <pointLight position={[0, 10, 0]} intensity={0.3} color="#FFFFFF" />
       
-      {/* Environment */}
-      <Stars radius={300} depth={60} count={1000} factor={7} saturation={0} fade />
-      
-      {/* Ground/Platform */}
+      {/* Ground/Platform - White */}
       <Plane args={[20, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, -10]}>
-        <meshStandardMaterial color="#2D1B69" metalness={0.3} roughness={0.7} />
+        <meshStandardMaterial color="#FFFFFF" metalness={0.1} roughness={0.9} />
       </Plane>
       
-      {/* Lane Markers */}
+      {/* Lane Markers - Dark for visibility */}
       {[-2, 0, 2].map((x, i) => (
         <Box key={i} args={[0.1, 0.2, 100]} position={[x, -0.8, -10]}>
-          <meshStandardMaterial color="#FFD700" emissive="#FFD700" emissiveIntensity={0.2} />
+          <meshStandardMaterial color="#333333" emissive="#333333" emissiveIntensity={0.2} />
         </Box>
       ))}
       
@@ -421,6 +430,7 @@ function GameWorld3D({ gameState, obstacles, coins, selectedCharacter, selectedR
           key={obstacle.id} 
           position={obstacle.position} 
           type={obstacle.type}
+          characterModel={gameState.selectedCharacter}
         />
       ))}
       
@@ -428,26 +438,6 @@ function GameWorld3D({ gameState, obstacles, coins, selectedCharacter, selectedR
       {coins.map((coin) => (
         <Coin3D key={coin.id} position={coin.position} />
       ))}
-      
-      {/* Realm-specific Effects */}
-      {selectedRealm.theme === 'forest' && (
-        <>
-          {Array.from({ length: 30 }).map((_, i) => (
-            <Float key={i} speed={0.5 + Math.random() * 0.5} rotationIntensity={0.3}>
-              <Sphere 
-                args={[0.05]} 
-                position={[
-                  (Math.random() - 0.5) * 20,
-                  Math.random() * 10,
-                  (Math.random() - 0.5) * 50
-                ]}
-              >
-                <meshStandardMaterial color="#90EE90" transparent opacity={0.6} />
-              </Sphere>
-            </Float>
-          ))}
-        </>
-      )}
     </>
   );
 }
@@ -956,14 +946,23 @@ const EclipseRealmsGame = () => {
                     Play Game
                   </Button>
                   
-                  <Button 
-                    onClick={() => setShowPayment(true)} 
-                    variant="outline"
-                    className="border-eclipse-gold text-eclipse-gold hover:bg-eclipse-gold/10"
-                  >
-                    <Crown className="w-4 h-4 mr-2" />
-                    View Premium Tiers
-                  </Button>
+                  <div className="flex gap-4 flex-wrap justify-center">
+                    <Button 
+                      onClick={() => setShowPayment(true)} 
+                      variant="outline"
+                      className="border-eclipse-gold text-eclipse-gold hover:bg-eclipse-gold/10"
+                    >
+                      <Crown className="w-4 h-4 mr-2" />
+                      View Premium Tiers
+                    </Button>
+                    
+                    <Button 
+                      onClick={() => window.open('https://apkpure.com/eclipse-isle/com.netease.eclipseisle', '_blank')} 
+                      className="bg-cosmic-white text-cosmic-void hover:bg-cosmic-white/90"
+                    >
+                      📱 Download Full Real Game
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
