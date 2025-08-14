@@ -135,42 +135,194 @@ const realms: Realm[] = [
   }
 ];
 
-// 3D Character Component with Image Texture
+// 3D Character Component with Visible Character Models
 function Character3D({ character, position, isPlayer = false }: { character: Character, position: THREE.Vector3, isPlayer?: boolean }) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const headRef = useRef<THREE.Mesh>(null);
   
   useFrame((state) => {
     if (meshRef.current && isPlayer) {
-      meshRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 1.5) * 0.05; // Slower animation
+      meshRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 1.5) * 0.05;
+    }
+    if (headRef.current && isPlayer) {
+      headRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 2) * 0.03;
     }
   });
 
+  // Character-specific shapes and features
+  const renderCharacterSpecific = () => {
+    switch (character.model) {
+      case 'deer':
+        return (
+          <>
+            {/* Deer Body */}
+            <Box ref={meshRef} args={[0.6, 1.2, 0.8]} position={[0, 0.6, 0]}>
+              <meshStandardMaterial color="#8B4513" metalness={0.2} roughness={0.8} />
+            </Box>
+            {/* Deer Head */}
+            <Box ref={headRef} args={[0.4, 0.4, 0.6]} position={[0, 1.4, 0.2]}>
+              <meshStandardMaterial color="#8B4513" metalness={0.2} roughness={0.8} />
+            </Box>
+            {/* Antlers */}
+            <Box args={[0.05, 0.6, 0.05]} position={[-0.15, 1.8, 0]}>
+              <meshStandardMaterial color="#4A4A4A" />
+            </Box>
+            <Box args={[0.05, 0.6, 0.05]} position={[0.15, 1.8, 0]}>
+              <meshStandardMaterial color="#4A4A4A" />
+            </Box>
+            {/* Legs */}
+            {[-0.2, 0.2].map((x, i) => (
+              <Box key={i} args={[0.1, 0.6, 0.1]} position={[x, 0.3, 0]}>
+                <meshStandardMaterial color="#8B4513" />
+              </Box>
+            ))}
+          </>
+        );
+      
+      case 'bull':
+        return (
+          <>
+            {/* Bull Body */}
+            <Box ref={meshRef} args={[0.8, 1.4, 1.0]} position={[0, 0.7, 0]}>
+              <meshStandardMaterial color="#2F2F2F" metalness={0.3} roughness={0.7} />
+            </Box>
+            {/* Bull Head */}
+            <Box ref={headRef} args={[0.5, 0.5, 0.4]} position={[0, 1.6, 0.3]}>
+              <meshStandardMaterial color="#2F2F2F" metalness={0.3} roughness={0.7} />
+            </Box>
+            {/* Horns */}
+            <Box args={[0.04, 0.3, 0.04]} position={[-0.2, 1.9, 0.2]} rotation={[0, 0, 0.3]}>
+              <meshStandardMaterial color="#FFFACD" />
+            </Box>
+            <Box args={[0.04, 0.3, 0.04]} position={[0.2, 1.9, 0.2]} rotation={[0, 0, -0.3]}>
+              <meshStandardMaterial color="#FFFACD" />
+            </Box>
+            {/* Legs */}
+            {[-0.3, -0.1, 0.1, 0.3].map((x, i) => (
+              <Box key={i} args={[0.12, 0.7, 0.12]} position={[x, 0.35, 0]}>
+                <meshStandardMaterial color="#2F2F2F" />
+              </Box>
+            ))}
+          </>
+        );
+      
+      case 'doraemon':
+        return (
+          <>
+            {/* Doraemon Body */}
+            <Sphere ref={meshRef} args={[0.6]} position={[0, 0.8, 0]}>
+              <meshStandardMaterial color="#4169E1" metalness={0.4} roughness={0.6} />
+            </Sphere>
+            {/* Doraemon Head */}
+            <Sphere ref={headRef} args={[0.5]} position={[0, 1.6, 0]}>
+              <meshStandardMaterial color="#4169E1" metalness={0.4} roughness={0.6} />
+            </Sphere>
+            {/* White belly */}
+            <Sphere args={[0.4]} position={[0, 0.8, 0.3]}>
+              <meshStandardMaterial color="#FFFFFF" />
+            </Sphere>
+            {/* Eyes */}
+            <Sphere args={[0.08]} position={[-0.15, 1.7, 0.4]}>
+              <meshStandardMaterial color="#000000" />
+            </Sphere>
+            <Sphere args={[0.08]} position={[0.15, 1.7, 0.4]}>
+              <meshStandardMaterial color="#000000" />
+            </Sphere>
+            {/* Red nose */}
+            <Sphere args={[0.05]} position={[0, 1.6, 0.45]}>
+              <meshStandardMaterial color="#FF0000" />
+            </Sphere>
+          </>
+        );
+      
+      case 'pikachu':
+        return (
+          <>
+            {/* Pikachu Body */}
+            <Sphere ref={meshRef} args={[0.5]} position={[0, 0.7, 0]}>
+              <meshStandardMaterial color="#FFD700" metalness={0.2} roughness={0.8} />
+            </Sphere>
+            {/* Pikachu Head */}
+            <Sphere ref={headRef} args={[0.4]} position={[0, 1.4, 0]}>
+              <meshStandardMaterial color="#FFD700" metalness={0.2} roughness={0.8} />
+            </Sphere>
+            {/* Ears */}
+            <Box args={[0.1, 0.4, 0.05]} position={[-0.2, 1.8, 0]} rotation={[0, 0, 0.5]}>
+              <meshStandardMaterial color="#FFD700" />
+            </Box>
+            <Box args={[0.1, 0.4, 0.05]} position={[0.2, 1.8, 0]} rotation={[0, 0, -0.5]}>
+              <meshStandardMaterial color="#FFD700" />
+            </Box>
+            {/* Ear tips */}
+            <Box args={[0.08, 0.1, 0.04]} position={[-0.25, 2.0, 0]}>
+              <meshStandardMaterial color="#000000" />
+            </Box>
+            <Box args={[0.08, 0.1, 0.04]} position={[0.25, 2.0, 0]}>
+              <meshStandardMaterial color="#000000" />
+            </Box>
+            {/* Eyes */}
+            <Sphere args={[0.06]} position={[-0.12, 1.45, 0.35]}>
+              <meshStandardMaterial color="#000000" />
+            </Sphere>
+            <Sphere args={[0.06]} position={[0.12, 1.45, 0.35]}>
+              <meshStandardMaterial color="#000000" />
+            </Sphere>
+            {/* Cheeks */}
+            <Sphere args={[0.08]} position={[-0.3, 1.35, 0.2]}>
+              <meshStandardMaterial color="#FF6347" />
+            </Sphere>
+            <Sphere args={[0.08]} position={[0.3, 1.35, 0.2]}>
+              <meshStandardMaterial color="#FF6347" />
+            </Sphere>
+            {/* Tail */}
+            <Box args={[0.05, 0.6, 0.05]} position={[0, 1.2, -0.5]} rotation={[0.5, 0, 0]}>
+              <meshStandardMaterial color="#FFD700" />
+            </Box>
+          </>
+        );
+      
+      default:
+        return (
+          <>
+            <Box ref={meshRef} args={[0.8, 1.6, 0.4]} position={[0, 0.8, 0]}>
+              <meshStandardMaterial color={character.color} metalness={0.3} roughness={0.7} />
+            </Box>
+            <Sphere ref={headRef} args={[0.3]} position={[0, 1.8, 0]}>
+              <meshStandardMaterial color={character.color} metalness={0.2} roughness={0.8} />
+            </Sphere>
+          </>
+        );
+    }
+  };
+
   return (
     <group position={position}>
-      {/* Character Body */}
-      <Box ref={meshRef} args={[0.8, 1.6, 0.4]} position={[0, 0.8, 0]}>
-        <meshStandardMaterial color={character.color} metalness={0.3} roughness={0.7} />
-      </Box>
-      
-      {/* Character Head */}
-      <Sphere args={[0.3]} position={[0, 1.8, 0]}>
-        <meshStandardMaterial color={character.color} metalness={0.2} roughness={0.8} />
-      </Sphere>
+      {renderCharacterSpecific()}
       
       {/* Character Glow Effect */}
-      <Sphere args={[1.2]} position={[0, 1, 0]}>
-        <meshBasicMaterial color={character.color} transparent opacity={0.05} />
+      <Sphere args={[1.5]} position={[0, 1, 0]}>
+        <meshBasicMaterial color={character.color} transparent opacity={0.03} />
       </Sphere>
       
       {/* Character Name */}
       <Text
-        position={[0, 2.5, 0]}
-        fontSize={0.25}
+        position={[0, 2.8, 0]}
+        fontSize={0.3}
         color="white"
         anchorX="center"
         anchorY="middle"
       >
         {character.name}
+      </Text>
+      
+      {/* Character Emoji floating above */}
+      <Text
+        position={[0, 3.2, 0]}
+        fontSize={0.4}
+        anchorX="center"
+        anchorY="middle"
+      >
+        {character.emoji}
       </Text>
     </group>
   );

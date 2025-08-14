@@ -93,6 +93,7 @@ const DeveloperSection = () => {
                     variant="outline" 
                     size="sm"
                     className="border-cyber-neon/40 text-cyber-neon hover:bg-cyber-neon/20"
+                    onClick={() => window.open('https://github.com/santosh892', '_blank')}
                   >
                     <Github className="w-4 h-4 mr-2" />
                     GitHub
@@ -101,6 +102,7 @@ const DeveloperSection = () => {
                     variant="outline" 
                     size="sm"
                     className="border-rift-cyan/40 text-rift-cyan hover:bg-rift-cyan/20"
+                    onClick={() => window.open('https://www.linkedin.com/in/santosh-khadka-11068126b', '_blank')}
                   >
                     <Linkedin className="w-4 h-4 mr-2" />
                     LinkedIn
