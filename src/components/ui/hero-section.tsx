@@ -64,9 +64,14 @@ const HeroSection = () => {
               Play Eclipse Realms Now
             </a>
           </Button>
-          <Button variant="cosmic" size="lg" className="text-lg px-8 py-6">
+          <Button 
+            variant="cosmic" 
+            size="lg" 
+            className="text-lg px-8 py-6"
+            onClick={() => window.open('https://github.com/santosh892', '_blank')}
+          >
             <Download className="mr-2 h-5 w-5" />
-            Download Full Game
+            View Source Code
           </Button>
         </div>
 

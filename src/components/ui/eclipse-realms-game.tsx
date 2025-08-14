@@ -398,13 +398,20 @@ function CharacterSelection({ characters, selectedCharacter, onSelect }: {
             onClick={() => onSelect(char.model)}
           >
             <CardContent className="p-4 text-center">
-              <div className="w-16 h-16 mx-auto mb-2 bg-cover bg-center rounded-lg border-2 border-cosmic-gray" 
-                   style={{ backgroundImage: `url(${char.image})` }}>
+              <div className="relative">
+                <div className="w-20 h-20 mx-auto mb-3 bg-cover bg-center rounded-lg border-2 border-eclipse-gold shadow-lg" 
+                     style={{ backgroundImage: `url(${char.image})` }}>
+                </div>
+                {isSelected && (
+                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-eclipse-gold rounded-full flex items-center justify-center">
+                    <span className="text-cosmic-void text-xs font-bold">✓</span>
+                  </div>
+                )}
               </div>
-              <h4 className="font-semibold text-cosmic-white mb-1">{char.name}</h4>
-              <div className="text-2xl mb-2">{char.emoji}</div>
-              <div className="text-xs text-cosmic-white/60">
-                {char.abilities.slice(0, 2).join(", ")}
+              <h4 className="font-bold text-cosmic-white mb-2 text-sm">{char.name}</h4>
+              <div className="text-3xl mb-3">{char.emoji}</div>
+              <div className="text-xs text-cosmic-white/70 leading-relaxed">
+                {char.abilities.slice(0, 2).join(" • ")}
               </div>
             </CardContent>
           </Card>
@@ -420,9 +427,9 @@ function DifficultySelection({ selectedDifficulty, onSelect }: {
   onSelect: (difficulty: string) => void;
 }) {
   const difficulties = [
-    { name: "Slow", value: "slow", speed: 1.0, description: "Perfect for beginners" },
-    { name: "Medium", value: "medium", speed: 1.5, description: "Balanced challenge" },
-    { name: "Hard", value: "hard", speed: 2.5, description: "For experienced players" }
+    { name: "Slow", value: "slow", speed: 0.6, description: "Perfect for beginners" },
+    { name: "Medium", value: "medium", speed: 1.0, description: "Balanced challenge" },
+    { name: "Hard", value: "hard", speed: 1.8, description: "For experienced players" }
   ];
 
   return (
@@ -464,7 +471,7 @@ const EclipseRealmsGame = () => {
     playerLane: 0,
     selectedCharacter: "deer",
     selectedRealm: 0,
-    speed: 1.0, // Slower initial speed for easy mode
+    speed: 0.8, // Even slower initial speed
     playerY: 0,
     isJumping: false,
     isPremium: true // All characters unlocked
@@ -501,10 +508,10 @@ const EclipseRealmsGame = () => {
           newState.playerY = 0;
         }
 
-        // Update distance and score (slower)
-        newState.distance += 0.3;
+        // Update distance and score (much slower)
+        newState.distance += 0.2;
         newState.score += 1;
-        newState.speed = Math.min(4, 1.5 + newState.distance / 200); // Slower max speed
+        newState.speed = Math.min(3, 0.8 + newState.distance / 300); // Much slower progression
 
         return newState;
       });
@@ -516,8 +523,8 @@ const EclipseRealmsGame = () => {
           position: new THREE.Vector3(obs.position.x, obs.position.y, obs.position.z + gameState.speed * 0.8)
         })).filter(obs => obs.position.z < 15);
 
-        // Spawn new obstacles (less frequent)
-        if (Math.random() < 0.015) {
+        // Spawn new obstacles (much less frequent)
+        if (Math.random() < 0.008) {
           const lane = Math.floor(Math.random() * 3) - 1;
           updated.push({
             id: Date.now() + Math.random(),
@@ -537,8 +544,8 @@ const EclipseRealmsGame = () => {
           position: new THREE.Vector3(coin.position.x, coin.position.y, coin.position.z + gameState.speed * 0.8)
         })).filter(coin => coin.position.z < 15);
 
-        // Spawn new coins (less frequent)
-        if (Math.random() < 0.01) {
+        // Spawn new coins (much less frequent)
+        if (Math.random() < 0.006) {
           const lane = Math.floor(Math.random() * 3) - 1;
           updated.push({
             id: Date.now() + Math.random(),
@@ -686,10 +693,10 @@ const EclipseRealmsGame = () => {
 
   const getDifficultySpeed = (difficulty: string) => {
     switch (difficulty) {
-      case "slow": return 1.0;
-      case "medium": return 1.5;
-      case "hard": return 2.5;
-      default: return 1.0;
+      case "slow": return 0.6;
+      case "medium": return 1.0;
+      case "hard": return 1.8;
+      default: return 0.6;
     }
   };
 
